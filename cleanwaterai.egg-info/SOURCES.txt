@@ -6,9 +6,12 @@ cleanwaterai.egg-info/SOURCES.txt
 cleanwaterai.egg-info/dependency_links.txt
 cleanwaterai.egg-info/top_level.txt
 scripts/__init__.py
+scripts/deploy.py
 scripts/extract_data.py
+scripts/ingest_live_gee.py
+scripts/ingest_live_nlp.py
+scripts/ingest_live_wpdx.py
 scripts/merge_data.py
 scripts/prepare_data.py
-scripts/streamlit_app.py
 scripts/train_nlp.py
 scripts/train_xgb.py
