@@ -131,7 +131,7 @@ def merge_mercury_zinc(output_file: str="../data/processed/mercury_zinc.csv") ->
     except FileNotFoundError:
         print("⚠️ || Collapsed CSV files not found, please ensure they exist in the specified path.")
         return pd.DataFrame()
-    
+  
     
 def get_gems(file: str="../data/processed/gems.csv") -> pd.DataFrame:
     """

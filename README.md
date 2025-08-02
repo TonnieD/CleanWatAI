@@ -140,24 +140,17 @@ streamlit_app.py → Interactive dashboard display
 1. **Clone and Navigate to Project:**
 ```bash
 git clone https://github.com/TonnieD/CleanWatAI.git
-cd cleanwatai
+cd cleanwaterai
 ```
 
-2. Create a pyproject.toml file with the following content:
-```toml
-[build-system]
-requires = ["setuptools>=61.0", "wheel"]
-build-backend = "setuptools.build_meta"
-```
-
-3. **Install Package in Development Mode:**
+2. **Run Setup (creates conda environment and installs everything):**
 ```bash
-pip install -e .
+python setup.py
 ```
 
-4. **Install Dependencies:**
+3. **Activate Environment:**
 ```bash
-pip install -r requirements.txt
+conda activate cleanwaterai_env
 ```
 
 ### Running the Complete Pipeline

@@ -2,6 +2,7 @@ import streamlit as st
 import pandas as pd
 import numpy as np
 
+# Config
 st.set_page_config(
     page_title="CleanWater AI",
     page_icon="💧",
@@ -17,6 +18,7 @@ with col2:
 
 st.markdown("<br><br><br>", unsafe_allow_html=True)
 
+# TextBox and Select Boxes
 col1, col2, col3 = st.columns([1, 4, 1])
 with col2:
     st.text_area(label="Descsribe what you want to know", height=150)
@@ -44,7 +46,6 @@ st.markdown("<br><br><br>", unsafe_allow_html=True)
 
 # Dashboard sections
 col1, col2, col3, col4, col5 = st.columns([1, 2, 2, 2, 1],gap="large")
-
 with col2:
     with st.container():
         st.subheader("Quick Insights")
@@ -58,7 +59,6 @@ with col2:
         st.text("")
         st.text("Trend: ↗️ Slight increase")
         st.text("Last Updated: Today 01:03")
-
 with col3:
     with st.container():
         st.subheader("Latest Alerts")
@@ -73,7 +73,6 @@ with col3:
         st.text("Industrial zone • 1d ago")
         st.text("")
         st.button("View All", key="view_alerts")
-
 with col4:
     with st.container():
         st.subheader("Reports & Analytics")
@@ -91,6 +90,7 @@ with col4:
         
 st.markdown("<br><br><br>", unsafe_allow_html=True)
         
+# Geospatial Map Section
 with st.container(border=True):
     st.markdown("<br>", unsafe_allow_html=True)
     
@@ -243,7 +243,6 @@ with st.container(border=True):
 
 # Latest Public Data Section
 st.header("📊 Latest Public Water Data")
-
 data_cols = st.columns([.5, 10, .5])
 with data_cols[1]:
     st.text("Showing the most recent water point data from the Water Point Data Exchange (WPDx) for Kenya")
