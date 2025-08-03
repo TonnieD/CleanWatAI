@@ -1,3 +1,4 @@
+# Imports
 import streamlit as st
 import pandas as pd
 import numpy as np
@@ -5,27 +6,53 @@ import joblib
 import pydeck as pdk
 import matplotlib.pyplot as plt
 import seaborn as sns
+import ee
+import os
 
+# Streamlit import and config 
 st.set_page_config(page_title="💧 CleanWat AI – Water Contamination Risk Map", layout="wide")
 
-# ✅ Load pipeline model
+
+# Earth Engine Authentication
+SERVICE_ACCOUNT = 'cleanwatai@ee-dianasituation.iam.gserviceaccount.com'
+KEY_PATH = 'service_key.json'
+
+@st.cache_resource
+def init_ee():
+    try:
+        credentials = ee.ServiceAccountCredentials(SERVICE_ACCOUNT, KEY_PATH)
+        ee.Initialize(credentials)
+        return True
+    except Exception as e:
+        st.error(f"Earth Engine authentication failed: {e}")
+        return False
+
+if not init_ee():
+    st.stop()
+else:
+    st.success("✅ Earth Engine authenticated successfully")
+
+
+# Streamlit Configuration
+st.markdown("Explore water quality risks in your area")
+
+# Load Model and Data
 model = joblib.load("../models/environmental.pkl")
 
-# ✅ Load data
 df = pd.read_csv("../data/processed/environmental.csv")
 df = df.dropna(subset=["latitude", "longitude"])
 df.dropna(axis=1, how="all", inplace=True)
 
-# ✅ Add location name
 df["location_name"] = (
     df["clean_adm3"].fillna("") + ", " +
     df["clean_adm2"].fillna("") + ", " +
     df["clean_adm1"].fillna("")
 )
 
-# ✅ Predict risk
 df["predicted_risk"] = model.predict(df)
 
+
+# Risk Formatting
 def risk_label(r):
     return {
         0: "🟢 Safe Quality",
@@ -51,22 +78,14 @@ df["risk_label_clean"] = df["risk_label"].replace({
     "🟢 Safe Quality": "Safe Quality"
 })
 
-# ========================
-# ✅ Title + Description
-# ========================
-st.title("💧 CleanWat AI – Water Contamination Risk Map")
-st.markdown("Explore water quality risks in your area")
 
-# ========================
-# ✅ Filter by risk level
-# ========================
+# Risk Level Filter
 available_risks = sorted(df["risk_label"].unique().tolist())
 selected_risks = st.multiselect("Filter by risk level:", available_risks, default=available_risks)
 filtered_df = df[df["risk_label"].isin(selected_risks)]
 
-# ========================
-# ✅ Pydeck Map
-# ========================
+
+# Interactive Map
 view_state = pdk.ViewState(
     latitude=filtered_df["latitude"].mean(),
     longitude=filtered_df["longitude"].mean(),
@@ -97,9 +116,8 @@ st.pydeck_chart(pdk.Deck(
     tooltip=tooltip
 ))
 
-# ========================
-# ✅ Sidebar Point Selector
-# ========================
+
+# Sidebar Point Selection
 st.sidebar.title("📍 Select Monitoring Point")
 df["location_label"] = df.index.astype(str)
 selected_label = st.sidebar.selectbox("Choose water point:", df["location_label"])
@@ -112,9 +130,8 @@ st.sidebar.text(f"Latitude: {selected_row['latitude']:.4f}")
 st.sidebar.text(f"Longitude: {selected_row['longitude']:.4f}")
 st.sidebar.text(f"Location: {selected_row['location_name']}")
 
-# ========================
-# ✅ Summary Tabs (Table + Graphs)
-# ========================
+
+# Summary Tabs
 st.subheader("📊 Latest Public Water Data")
 st.markdown("Showing the most recent water point data from the Water Point Data Exchange (WPDx) for Kenya")
 st.markdown("Last updated: July 25, 2025")
@@ -124,12 +141,13 @@ tab1, tab2, tab3 = st.tabs(["All Data", "Functional Status", "Risk Analysis"])
 with tab1:
     st.dataframe(
         df,
-        column_order=["location_name", "latitude", "longitude", "risk_label"] + [col for col in df.columns if col not in ["location_name", "latitude", "longitude", "risk_label"]]
+        column_order=["location_name", "latitude", "longitude", "risk_label"] +
+                     [col for col in df.columns if col not in ["location_name", "latitude", "longitude", "risk_label"]]
     )
     st.download_button("Download WPDX Kenya Data (CSV)", df.to_csv(index=False), file_name="environmental_full_data.csv")
 
 with tab2:
-    st.markdown("### ✅ Functional Status")
+    st.markdown("### Functional Status")
     if "status_clean" in df.columns:
         fig1, ax1 = plt.subplots()
         df["status_clean"].value_counts().plot(kind="bar", ax=ax1, color="skyblue")
@@ -163,7 +181,8 @@ with tab3:
     st.dataframe(filtered_risk_df[["location_name", "latitude", "longitude", "risk_label", "clean_adm1"]])
     st.download_button("Download Risk Data", filtered_risk_df.to_csv(index=False), file_name="risk_filtered.csv")
 
-# ✅ Footer
+
+# Footer
 st.markdown("---")
 st.markdown("GitHub: [CleanWatAI](https://github.com/TonnieD/CleanWatAI)")
 st.markdown("© 2025 CleanWatAI. Data sourced from Water Point Data Exchange (WPDx).")
