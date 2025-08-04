@@ -11,10 +11,43 @@ from pathlib import Path
 from nltk.stem import WordNetLemmatizer
 from nltk.corpus import stopwords
 import re
+import os
+import sys
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
+PIPELINE = joblib.load('models/water_quality_pipeline.pkl')
 
-#import sklearn
-#print("✅ Scikit-learn version in Streamlit app:", sklearn.__version__)
+all_demo_cases = [
+    {'name': 'Select a scenario matching your area', 'description': '', 'expected': '', 'inputs': {'pH': 7.4, 'TEMP': 22.0, 'EC': 350.0}},
+    {'name': 'Clean Borehole Water', 'description': 'A properly maintained borehole with good mineral balance.', 'expected': 'Safe', 'inputs': {'pH': 7.4, 'TEMP': 21.0, 'EC': 350.0}},
+    {'name': 'Urban River Contamination', 'description': 'River water downstream from a dense urban area.', 'expected': 'Action Required', 'inputs': {'pH': 7.9, 'TEMP': 26.0, 'EC': 1800.0}},
+    {'name': 'Rift Valley Mineral Spring', 'description': 'Geothermal spring with high natural mineral content.', 'expected': 'Action Required', 'inputs': {'pH': 8.8, 'TEMP': 35.0, 'EC': 2200.0}},
+    {'name': 'High-Altitude Forest Stream', 'description': 'Cold, pristine stream in a protected forest.', 'expected': 'Safe', 'inputs': {'pH': 7.1, 'TEMP': 16.0, 'EC': 250.0}},
+    {'name': 'Livestock Watering Dam', 'description': 'Community dam with high livestock concentration.', 'expected': 'Action Required', 'inputs': {'pH': 8.3, 'TEMP': 29.0, 'EC': 1900.0}},
+    {'name': 'Industrial Wastewater Discharge', 'description': 'Water downstream from a factory with chemical runoff.', 'expected': 'Action Required', 'inputs': {'pH': 5.8, 'TEMP': 32.0, 'EC': 2800.0}},
+    {'name': 'Shallow Well (Farming Area)', 'description': 'Hand-dug well in an area with heavy fertilizer use.', 'expected': 'Action Required', 'inputs': {'pH': 8.4, 'TEMP': 24.0, 'EC': 1400.0}},
+    {'name': 'Municipal Tap Water', 'description': 'Treated municipal water supply.', 'expected': 'Safe', 'inputs': {'pH': 7.2, 'TEMP': 22.0, 'EC': 420.0}},
+    {'name': 'Acid Mine Drainage', 'description': 'Runoff from an abandoned mine with heavy metals.', 'expected': 'Action Required', 'inputs': {'pH': 4.2, 'TEMP': 28.0, 'EC': 3500.0}},
+    {'name': 'Premium Bottled Water', 'description': 'Commercial bottled water from a reputable brand.', 'expected': 'Safe', 'inputs': {'pH': 7.0, 'TEMP': 20.0, 'EC': 180.0}}
+]
+case_names = [case['name'] for case in all_demo_cases]
+DEFAULT_ENCODED_VALUE = 0 
+
+if 'ph' not in st.session_state:
+    st.session_state.ph = all_demo_cases[0]['inputs']['pH']
+    st.session_state.temp = all_demo_cases[0]['inputs']['TEMP']
+    st.session_state.ec = all_demo_cases[0]['inputs']['EC']
+    st.session_state.description = all_demo_cases[0]['description']
+
+def update_state_from_selection():
+    selected_case_name = st.session_state.case_selection
+    for case in all_demo_cases:
+        if case['name'] == selected_case_name:
+            st.session_state.ph = case['inputs']['pH']
+            st.session_state.temp = case['inputs']['TEMP']
+            st.session_state.ec = case['inputs']['EC']
+            st.session_state.description = case['description']
+            break
 
 # Download necessary NLTK resources
 try:
@@ -213,7 +246,7 @@ with st.container(border=True):
             st.text("")
             
         #Load data
-        df = pd.read_csv("../data/processed/environmental.csv")
+        df = pd.read_csv("data/processed/environmental.csv")
         df = df.dropna(subset=["latitude", "longitude"])
         df.dropna(axis=1, how="all", inplace=True)
 
@@ -350,33 +383,66 @@ with st.container(border=True):
     st.text("")  # Vertical spacing
     st.text("")  # Additional vertical spacing
     
-    subheader_cols = st.columns([.5, 10, .5])  # Reverted to 0.5 padding
+    subheader_cols = st.columns([.5, 10, .5])  
     with subheader_cols[1]:
-        st.subheader("Showing water quality monitoring data for 🇰🇪Kenya")
+        with st.container(border=True):
+            
+            st.header("Anomaly Check for Water Quality based on Chemical Content")
+            col1, col2 = st.columns([1, 1], gap="large")
 
-    outer_cols = st.columns([.5, 10, .5])  # Consistent 0.5 padding
-    with outer_cols[1]:
-        row1_cols = st.columns([6, 6])
-        with row1_cols[0]:
-            with st.expander("🔴 High Risk", expanded=True):
-                st.text("Areas with severe contamination")
-                st.text("Immediate action required")
-        
-        with row1_cols[1]:
-            with st.expander("🟠 Medium Risk", expanded=True):
-                st.text("Areas with concerning levels")
-                st.text("Regular monitoring needed")
-        
-        row2_cols = st.columns([6, 6])
-        with row2_cols[0]:
-            with st.expander("🟡 Low Risk", expanded=True):
-                st.text("Areas with minor issues")
-                st.text("Routine testing recommended")
-        
-        with row2_cols[1]:
-            with st.expander("🟢 Safe Quality", expanded=True):
-                st.text("Areas meeting all standards")
-                st.text("No action required")
+            with col1:
+                st.selectbox(
+                    "Load a Pre-built Scenario",
+                    options=case_names,
+                    key='case_selection',
+                    on_change=update_state_from_selection
+                )
+
+                st.subheader("Sensor Inputs")
+                ph_val = st.number_input("pH Level", min_value=0.0, max_value=14.0, value=st.session_state.ph, step=0.1)
+                temp_val = st.number_input("Temperature (°C)", min_value=0.0, max_value=100.0, value=st.session_state.temp, step=0.5)
+                ec_val = st.number_input("Electrical Conductivity (µS/cm)", min_value=0.0, max_value=10000.0, value=st.session_state.ec, step=10.0)
+
+                if st.button("Check Risk", type="primary", use_container_width=True):
+                    inputs_dict = {
+                        'pH': ph_val,
+                        'TEMP': temp_val,
+                        'EC': ec_val,
+                        'station_encoded': DEFAULT_ENCODED_VALUE
+                    }
+                    inputs_df = pd.DataFrame([inputs_dict])
+                    risk_score = PIPELINE.predict_risk(inputs_df)[0]
+                    st.session_state.risk_score = risk_score
+                    st.session_state.last_case_checked = st.session_state.case_selection
+
+            with col2:
+                if 'risk_score' in st.session_state:
+                    with st.container(border=True):
+                        risk_score = st.session_state.risk_score
+                        last_case_name = st.session_state.last_case_checked
+                        
+                        # Find the expected outcome for the tested case
+                        expected_outcome = "N/A"
+                        for case in all_demo_cases:
+                            if case['name'] == last_case_name:
+                                expected_outcome = case['expected']
+                                break
+                        
+                        st.subheader(f"Results")
+                        predicted_outcome = "Action Required" if risk_score > 0.5 else "Safe"
+                        
+                        st.metric(label="Chemically Predicted Risk Score", value=f"{risk_score:.3f}")
+
+                        if predicted_outcome == "Action Required":
+                            st.error(f"Verdict: {predicted_outcome}")
+                        else:
+                            st.success(f"Verdict: {predicted_outcome}")
+
+                        # Display the check only if it was a pre-built scenario
+                        if expected_outcome != "N/A" and expected_outcome != '':
+                            st.markdown("---")
+                            emoji = "✅" if predicted_outcome == expected_outcome else "❌"
+                            st.write(f"**Expected:** {expected_outcome} | **Prediction Matches Expected:** {emoji}")
 
     st.text("")  # Vertical spacing
     st.text("")  # Additional vertical spacing
