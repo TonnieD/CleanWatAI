@@ -4,3 +4,7 @@ numpy
 plotly
 geopandas
 shapely
+matplotlib
+seaborn
+scikit-learn
+joblib
