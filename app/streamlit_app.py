@@ -497,6 +497,7 @@ elif page == "Water Point Data Analysis":
             
             # TAB 1: ALL DATA
             with data_tab1:
+                st.write("🔍 Columns in df:", df.columns.tolist())
                 st.dataframe(
                     df,
                     column_config={
@@ -601,7 +602,6 @@ elif page == "Water Point Data Analysis":
                 st.text("")
 
                 # ✅ Step 1: Define the new column (do this outside any widget)
-                st.write("🔍 Columns in df:", df.columns.tolist())
                 df['point_id'] = df['location_name'].fillna('Unnamed') + ' (' + df['latitude'].astype(str) + ', ' + df['longitude'].astype(str) + ')'
 
                 # ✅ Step 2: Use it in the selectbox
