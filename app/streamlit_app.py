@@ -460,19 +460,6 @@ elif page == "Water Point Data Analysis":
         st.text("Showing the most recent water point data with model-predicted risk levels")
         st.text("Last updated: August 3, 2025")
         st.text("")
-        df["risk_label"] = df["predicted_risk"].apply(risk_label)
-        df["color"] = df["predicted_risk"].apply(risk_color)
-        df["risk_label_clean"] = df["risk_label"].replace({
-            "🔴 High Risk": "High Risk",
-            "🟠 Medium Risk": "Medium Risk",
-            "🟡 Low Risk": "Low Risk",
-            "🟢 Safe Quality": "Safe Quality"
-        })
-
-        df["quality_score"] = (1 - df["predicted_risk"] / 3 * 0.75) * 100
-        df["quality_score"] = df["quality_score"].round(1)
-
-        df["risk_level"] = df["risk_label_clean"]
 
         with st.container(border=True):
             data_tab1, data_tab2, data_tab3, data_tab4 = st.tabs(["All Data", "Functional Status", "Risk Analysis", "Quality Trend"])
