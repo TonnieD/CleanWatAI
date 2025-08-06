@@ -501,6 +501,23 @@ elif page == "Water Point Data Analysis":
     st.title("🔬 Data Analysis")
     st.write("Explore and analyze water point datasets.")
 
+    if "risk_label_clean" not in df.columns:
+        # If "predicted_risk" not already computed:
+        if "predicted_risk" not in df.columns:
+            df["predicted_risk"] = model.predict(df)
+
+        df["risk_label"] = df["predicted_risk"].apply(risk_label)
+
+        df["risk_label_clean"] = df["risk_label"].replace({
+            "🔴 High Risk": "High Risk",
+            "🟠 Medium Risk": "Medium Risk",
+            "🟡 Low Risk": "Low Risk",
+            "🟢 Safe Quality": "Safe Quality"
+        })
+
+        df["risk_level"] = df["risk_label_clean"]
+
+
     data_cols = st.columns([.5, 10, .5])
     with data_cols[1]:
         st.text("Showing the most recent water point data with model-predicted risk levels")
