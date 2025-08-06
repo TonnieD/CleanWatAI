@@ -195,10 +195,12 @@ with col2:
         st.text(f"Monitoring Stations: {num_stations} active")
         st.text("")
         st.text("Current Status:")
-        st.text(f"{risk_labels.get(most_common_risk, 'Unknown')}")
-        st.text("")
-        st.text(f"Trend: {trend}")
-        st.text("Last Updated: Today 01:03")
+        # Risk score summary
+        st.subheader(f"{selected_location} Risk Score Summary")
+        risk_counts = filtered_df["risk_score"].value_counts().sort_index()
+        for score, count in risk_counts.items():
+            label = risk_labels.get(score, f"Risk {score}")
+            st.text(f"{label}: {count}")
 with col3:
     with st.container():
         st.subheader("Latest Alerts")
