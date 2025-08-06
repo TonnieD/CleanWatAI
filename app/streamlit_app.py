@@ -497,7 +497,6 @@ elif page == "Water Point Data Analysis":
             
             # TAB 1: ALL DATA
             with data_tab1:
-                st.write("🔍 Columns in df:", df.columns.tolist())
                 st.dataframe(
                     df,
                     column_config={
