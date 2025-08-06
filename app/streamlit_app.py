@@ -91,6 +91,68 @@ def load_main_data():
 
 df = load_main_data()
 
+def risk_label(r):
+    return {
+        0: "🟢 Safe Quality",
+        1: "🟡 Low Risk",
+        2: "🟠 Medium Risk",
+        3: "🔴 High Risk"
+    }.get(r, "Unknown")
+
+def risk_color(r):
+    return {
+        0: [0, 255, 0, 160],
+        1: [255, 255, 0, 160],
+        2: [255, 165, 0, 160],
+        3: [255, 0, 0, 160]
+    }.get(r, [128, 128, 128, 160])
+
+
+def add_risk_metadata(df):
+    # Define risk labels
+    def risk_label(risk_score):
+        if risk_score >= 0.75:
+            return "🔴 High Risk"
+        elif risk_score >= 0.5:
+            return "🟠 Medium Risk"
+        elif risk_score >= 0.25:
+            return "🟡 Low Risk"
+        else:
+            return "🟢 Safe Quality"
+
+    # Define colors (for map, optional)
+    def risk_color(risk_score):
+        if risk_score >= 0.75:
+            return "red"
+        elif risk_score >= 0.5:
+            return "orange"
+        elif risk_score >= 0.25:
+            return "yellow"
+        else:
+            return "green"
+
+    # Add risk label and color
+    df["risk_label"] = df["predicted_risk"].apply(risk_label)
+    df["color"] = df["predicted_risk"].apply(risk_color)
+
+    # Add a clean label for filtering/plotting
+    df["risk_label_clean"] = df["risk_label"].replace({
+        "🔴 High Risk": "High Risk",
+        "🟠 Medium Risk": "Medium Risk",
+        "🟡 Low Risk": "Low Risk",
+        "🟢 Safe Quality": "Safe Quality"
+    })
+
+    # Calculate a score (optional metric, can be used for sorting)
+    df["quality_score"] = (1 - df["predicted_risk"] / 3 * 0.75) * 100
+    df["quality_score"] = df["quality_score"].round(1)
+
+    # Final clean risk level column (same as clean label)
+    df["risk_level"] = df["risk_label_clean"]
+
+    return df
+
+
 
 # Navigation options
 st.sidebar.title("📍 CleanWatAI Navigation")
@@ -297,22 +359,6 @@ elif page == "Water Point Contamination Risk Map":
 
         # Predict risk
         df["predicted_risk"] = model.predict(df)
-        
-        def risk_label(r):
-            return {
-                0: "🟢 Safe Quality",
-                1: "🟡 Low Risk",
-                2: "🟠 Medium Risk",
-                3: "🔴 High Risk"
-            }.get(r, "Unknown")
-
-        def risk_color(r):
-            return {
-                0: [0, 255, 0, 160],
-                1: [255, 255, 0, 160],
-                2: [255, 165, 0, 160],
-                3: [255, 0, 0, 160]
-            }.get(r, [128, 128, 128, 160])
 
         #print("📦 Available columns in df:", df.columns.tolist())
         #print(df.head())
@@ -540,19 +586,7 @@ elif page == "Water Point Data Analysis":
 
             # TAB 3: RISK ANALYSIS
             with data_tab3:
-                df["risk_label"] = df["predicted_risk"].apply(risk_label)
-                df["color"] = df["predicted_risk"].apply(risk_color)
-                df["risk_label_clean"] = df["risk_label"].replace({
-                    "🔴 High Risk": "High Risk",
-                    "🟠 Medium Risk": "Medium Risk",
-                    "🟡 Low Risk": "Low Risk",
-                    "🟢 Safe Quality": "Safe Quality"
-                })
-
-                df["quality_score"] = (1 - df["predicted_risk"] / 3 * 0.75) * 100
-                df["quality_score"] = df["quality_score"].round(1)
-
-                df["risk_level"] = df["risk_label_clean"]
+                df = add_risk_metadata(df)
                 risk_counts = df['risk_level'].value_counts().reset_index()
                 risk_counts.columns = ['Risk Level', 'Count']
 
