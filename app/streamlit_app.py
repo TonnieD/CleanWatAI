@@ -91,22 +91,6 @@ def load_main_data():
 
 df = load_main_data()
 
-# ---- Universal Risk Metadata Injection ----
-if "risk_level" not in df.columns:
-    try:
-        df["predicted_risk"] = model.predict(df)
-        df["risk_label"] = df["predicted_risk"].apply(risk_label)
-        df["risk_label_clean"] = df["risk_label"].replace({
-            "🔴 High Risk": "High Risk",
-            "🟠 Medium Risk": "Medium Risk",
-            "🟡 Low Risk": "Low Risk",
-            "🟢 Safe Quality": "Safe Quality"
-        })
-        df["risk_level"] = df["risk_label_clean"]
-    except Exception as e:
-        st.error(f"⚠️ Risk metadata generation failed: {e}")
-
-
 def risk_label(r):
     return {
         0: "🟢 Safe Quality",
@@ -122,6 +106,20 @@ def risk_color(r):
         2: [255, 165, 0, 160],
         3: [255, 0, 0, 160]
     }.get(r, [128, 128, 128, 160])
+
+# ---- Universal Risk Metadata Injection ----
+def add_risk_metadata(df):
+    if "predicted_risk" not in df.columns:
+        df["predicted_risk"] = model.predict(df)
+    df["risk_label"] = df["predicted_risk"].apply(risk_label)
+    df["risk_label_clean"] = df["risk_label"].replace({
+        "🔴 High Risk": "High Risk",
+        "🟠 Medium Risk": "Medium Risk",
+        "🟡 Low Risk": "Low Risk",
+        "🟢 Safe Quality": "Safe Quality"
+    })
+    df["risk_level"] = df["risk_label_clean"]
+    return df
 
 
 # Navigation options
