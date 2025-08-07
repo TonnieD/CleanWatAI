@@ -10,6 +10,7 @@ import nltk
 from pathlib import Path
 from nltk.stem import WordNetLemmatizer
 from nltk.corpus import stopwords
+from PIL import Image
 import re
 import sys
 import os
