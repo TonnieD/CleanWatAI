@@ -161,11 +161,11 @@ social_icons = {
 }
 
 # Sidebar to choose data source
-st.sidebar.markdown("### 📁 Data Source")
-data_choice = st.sidebar.radio(
-    "Select Dataset:",
-    ("Default (Kenya)", "Upload Your Own")
-)
+#st.sidebar.markdown("### 📁 Data Source")
+#data_choice = st.sidebar.radio(
+    #"Select Dataset:",
+    #("Default (Kenya)", "Upload Your Own")
+#)
 
 if data_choice == "Default (Kenya)":
     df = load_main_data()
