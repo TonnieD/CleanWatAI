@@ -10,6 +10,7 @@ import nltk
 from pathlib import Path
 from nltk.stem import WordNetLemmatizer
 from nltk.corpus import stopwords
+from PIL import Image
 import re
 import sys
 import os
@@ -71,215 +72,455 @@ def clean_texts(texts):
 
 
 # Models and pipeline loading
-model_path = Path(__file__).parent / "models" / "nlp_pipeline.pkl"
-nlp_pipeline = joblib.load(model_path) # NLP model
+@st.cache_resource
+def load_nlp_model():
+    path = Path(__file__).parent / "models" / "nlp_pipeline.pkl"
+    return joblib.load(path)
 
-env_model_path = Path(__file__).parent / "models" / "environmental.pkl"
-model = joblib.load(env_model_path) # Environmental model
+@st.cache_resource
+def load_env_model():
+    path = Path(__file__).parent / "models" / "environmental.pkl"
+    return joblib.load(path)
 
-# Config
-st.set_page_config(
-    page_title="CleanWatAI",
-    page_icon="💧",
-    layout="wide",
-    initial_sidebar_state="collapsed"
+nlp_pipeline = load_nlp_model() # NLP pipeline
+model = load_env_model() # Environmental model
+
+@st.cache_data
+def load_main_data():
+    path = Path(__file__).parent / "data" / "environmental.csv"
+    return pd.read_csv(path)
+
+@st.cache_data
+def load_custom_data(uploaded_file):
+    return pd.read_csv(uploaded_file)
+
+# Base path (adjust if your assets are deeper, e.g., in "assets/images/")
+ASSETS_DIR = Path(__file__).parent / "images"
+
+# Individual image paths
+about_img = ASSETS_DIR / "about.jpeg"
+mission_img = ASSETS_DIR / "mission.jpeg"
+vision_img = ASSETS_DIR / "vision.jpeg"
+
+# Team avatars
+team_members = {
+    "Diana": ASSETS_DIR / "diana.jpeg",
+    "Phanela": ASSETS_DIR / "phanela.jpeg",
+    "Lewis": ASSETS_DIR / "lewis.jpeg",
+    "Margaret": ASSETS_DIR / "maggie.jpeg",
+    "Anthony": ASSETS_DIR / "anthony.jpeg",
+}
+
+# Social/contact icons
+social_icons = {
+    "Email": ASSETS_DIR / "email.jpeg",
+    "Phone": ASSETS_DIR / "phone.jpeg",
+    "Twitter": ASSETS_DIR / "twitter.jpeg",
+    "LinkedIn": ASSETS_DIR / "linkedin.jpeg"
+}
+
+# Sidebar to choose data source
+st.sidebar.markdown("### 📁 Data Source")
+data_choice = st.sidebar.radio(
+    "Select Dataset:",
+    ("Default (Kenya)", "Upload Your Own")
 )
 
-# Header section
-col1, col2, col3 = st.columns([1, 2, 1])
-with col2:
-    st.title("💧 CleanWatAI")
-    st.subheader("What do you want to know about your local water quality?")
+if data_choice == "Default (Kenya)":
+    df = load_main_data()
+else:
+    uploaded_file = st.sidebar.file_uploader("Upload CSV File", type=["csv"])
+    if uploaded_file is not None:
+        df = load_custom_data(uploaded_file)
+    else:
+        st.warning("Please upload a CSV file to proceed.")
+        st.stop()
 
-st.markdown("<br><br><br>", unsafe_allow_html=True)
+def risk_label(r):
+    return {
+        0: "🟢 Safe Quality",
+        1: "🟡 Low Risk",
+        2: "🟠 Medium Risk",
+        3: "🔴 High Risk"
+    }.get(r, "Unknown")
 
-# TextBox and Select Boxes
-col1, col2, col3 = st.columns([1, 4, 1])
-with col2:
-    user_text = st.text_area(label="Describe what you want to know", height=150)
+def risk_color(r):
+    return {
+        0: [0, 255, 0, 160],
+        1: [255, 255, 0, 160],
+        2: [255, 165, 0, 160],
+        3: [255, 0, 0, 160]
+    }.get(r, [128, 128, 128, 160])
 
-    col1, col2, col3 = st.columns(3)
+# ---- Universal Risk Metadata Injection ----
+def add_risk_metadata(df):
+    if "predicted_risk" not in df.columns:
+        df["predicted_risk"] = model.predict(df)
+    df["risk_label"] = df["predicted_risk"].apply(risk_label)
+    df["risk_label_clean"] = df["risk_label"].replace({
+        "🔴 High Risk": "High Risk",
+        "🟠 Medium Risk": "Medium Risk",
+        "🟡 Low Risk": "Low Risk",
+        "🟢 Safe Quality": "Safe Quality"
+    })
+    df["risk_level"] = df["risk_label_clean"]
+    return df
+
+# Ensure 'location_name' column exists
+if "location_name" not in df.columns:
+    df["location_name"] = (
+        df["clean_adm3"].fillna("") + ", " +
+        df["clean_adm2"].fillna("") + ", " +
+        df["clean_adm1"].fillna("")
+    )
+
+
+# Navigation options
+st.set_page_config(layout="wide")
+st.sidebar.title("📍 CleanWatAI Navigation")
+
+st.sidebar.title("Navigation")
+page = st.sidebar.radio("Go to", [
+    "Home",
+    "NLP Page",
+    "Quick Insights and Reports",
+    "Water Point Contamination Risk Map",
+    "Water Point Data Analysis"
+])
+
+# Optional: Upload a custom dataset
+uploaded_file = st.sidebar.file_uploader("📄 Upload your water data CSV", type=["csv"])
+
+# Columns required for prediction
+required_features = [
+    "water_source_clean", "water_source_category", "water_tech_clean",
+    "clean_adm1", "clean_adm2", "clean_adm3", "status_clean",
+    "distance_to_primary", "distance_to_secondary", "distance_to_tertiary",
+    "distance_to_city", "distance_to_town", "local_population", "served_population",
+    "crucialness", "pressure", "staleness_score", "latitude", "longitude",
+    "chirps_30_precipitation", "ndvi_30_NDVI", "lst_30_LST_Day_1km", "pop_population"
+]
+
+# Default fallback data path
+default_data_path = Path(__file__).parent / "data" / "environmental.csv"
+
+# Function to assign risk label
+def assign_risk_label(score):
+    if score >= 0.75:
+        return "High"
+    elif score >= 0.5:
+        return "Medium"
+    elif score >= 0.25:
+        return "Low"
+    else:
+        return "Safe"
+
+# Load uploaded or fallback data
+if uploaded_file is not None:
+    df = pd.read_csv(uploaded_file)
+
+    # Check for required columns
+    if all(col in df.columns for col in required_features):
+        # Make prediction
+        df["risk_score"] = model.predict_proba(df[required_features])[:, 1]
+        df["predicted_risk"] = df["risk_score"].apply(lambda x: round(x, 3))
+        df["risk_label"] = df["risk_score"].apply(assign_risk_label)
+        df["risk_label_clean"] = df["risk_label"].str.lower()
+        df["risk_level"] = df["risk_label_clean"].map({
+            "safe": 0, "low": 1, "medium": 2, "high": 3
+        })
+        st.sidebar.success("✅ Uploaded dataset used.")
+    else:
+        st.sidebar.error("❌ Uploaded file missing required columns. Using default.")
+        df = pd.read_csv(default_data_path)
+else:
+    df = pd.read_csv(default_data_path)
+
+# Route to selected page
+if page == "Home":
+    # Page config
+    st.set_page_config(page_title="CleanWatAI | Home", layout="wide")
+
+    # --- About Section ---
+    st.markdown("## 🧼 About CleanWatAI")
+    col1, col2 = st.columns([1, 2])
     with col1:
-        color = st.selectbox("Water Color", options=["", "Clear", "Brown", "Green", "Other"])
+        st.image(about_img, use_container_width=True)
     with col2:
-        clarity = st.selectbox("Clarity", options=["", "Clear", "Murky"])
-    with col3:
-        odor = st.selectbox("Odor", options=["", "None", "Chemical", "Sewage", "Other"])
+        st.write(
+            """
+        Water is life. Yet for millions, that life is silently threatened every day by 
+        contaminated sources, failing infrastructure, and overlooked early signs. At CleanWatAI, 
+        we set out to change that — by teaching machines to listen when people speak about water.
 
-    col1, col2, col3 = st.columns(3)
+        We are a team of data scientists who believe that Artificial Intelligence shouldn't just 
+        be smart — it should be human-aware. CleanWatAI was born from a simple but powerful 
+        idea: that hidden within scattered news reports around the world are stories that warn us — 
+        if only we had the tools to hear them.
+
+        We use Natural Language Processing (NLP) to analyze global water-related news and identify 
+        phrases that signal contamination, danger, or crisis. But we didn’t stop at building a 
+        classifier. We built a solution — one that merges structured data, geographical 
+        intelligence, and machine learning into a real-time, explainable, and deployed model.
+
+        Our project doesn’t just predict — it prevents. It gives a voice to forgotten communities 
+        and empowers decision-makers with clarity before disaster strikes.
+        """
+        )
+
+
+    st.markdown("---")
+
+    # --- Mission Section ---
+    st.markdown("## 🎯 Mission")
+    col1, col2 = st.columns([2, 1])
     with col1:
-        rain = st.selectbox("Recent Rain", options=["", "No recent rain", "Light rain", "Heavy rain"])
+        st.write(
+            """
+        To harness the power of Natural Language Processing and data science to detect, 
+        visualize, and prevent water contamination risks — empowering communities and 
+        organizations with early, actionable insights.
+        """
+        )
     with col2:
-        activity = st.selectbox("Nearby Activity", options=["", "Residential", "Industrial", "Agricultural", "None"])
-    with col3:
-        infrastructure = st.selectbox("Infrastructure", options=["", "Good condition", "Needs repair", "Unknown"])
-    context_parts = []
+        st.image(mission_img, use_container_width=True)
 
-    if color:
-        context_parts.append(f"The water appears {color.lower()} in color.")
-    if clarity:
-        context_parts.append(f"It is {clarity.lower()} in clarity.")
-    if odor:
-        context_parts.append(f"It has a {odor.lower()} odor.")
+    st.markdown("---")
 
-    if rain:
-        context_parts.append(f"There was {rain.lower()}.")
-    if activity:
-        context_parts.append(f"The area nearby is {activity.lower()}.")
-    if infrastructure:
-        context_parts.append(f"The infrastructure is (in) {infrastructure.lower()}.")
+    # --- Meet the Team Section ---
+    st.subheader("👨‍👩‍👧 Meet the Team")
 
-    # Combine original input + context
-    combined_description = user_text.strip() + " " + " ".join(context_parts)
+    cols = st.columns(len(team_members))
 
-    # Edited text area with combined description from the select boxes and user input
-    edited_description = st.text_area("📝 Final Input to the Model (Editable)", value=combined_description, height=200)
+    for col, (name, image_path) in zip(cols, team_members.items()):
+        try:
+            with col:
+                st.image(Image.open(image_path), caption=name, use_container_width=True)
+        except Exception as e:
+            st.error(f"Error loading image for {name}: {e}")
 
-    col1, col2, col3 = st.columns(3)
-    with col3:
-        if st.button("Submit", type="primary", use_container_width=True):
-            # Only runs when Submit is clicked
-            if not edited_description or edited_description.strip() == "":
-                st.warning("Please describe your concern in the text area above.")
-            else:
-                prediction = nlp_pipeline.predict([edited_description])[0]
-                probability = nlp_pipeline.predict_proba([edited_description])[0][prediction]
+    st.markdown("---")
 
-                # Map prediction to label
-                label_map = {0: "Safe", 1: "Unsafe"}
-                prediction_label = label_map[prediction]
+    # --- Vision Section ---
+    st.markdown("## 🔮 Vision")
+    col1, col2 = st.columns([1, 2])
+    with col1:
+        st.image(vision_img, use_container_width=True)
+    with col2:
+        st.write(
+            """
+        A world where no community is left vulnerable to water-related dangers because 
+        warnings were missed, unheard, or too late.  
 
-                # Display result with appropriate style
-                if prediction_label == "Safe":
-                    st.success(f"✅ Water is predicted to be SAFE.\nConfidence: {probability:.2%}")
+        A future where Artificial Intelligence doesn’t just predict outcomes — 
+        it protects lives.
+        """
+        )
+
+    st.markdown("---")
+
+    # --- Contact Section ---
+    st.markdown("## 📞 Contact Us")
+    contact_cols = st.columns(4)
+    for i, (label, icon_path) in enumerate(social_icons.items()):
+        with contact_cols[i]:
+            st.image(icon_path, width=40)
+            st.caption(label)
+
+
+elif page == "NLP Page":
+    st.title("🧠 NLP-Based Water Report Classification")
+    st.markdown("Use the form below to classify water safety based on textual observations.")
+
+    col1, col2, col3 = st.columns([1, 4, 1])
+    with col2:
+        user_text = st.text_area(label="Describe what you want to know", height=150)
+
+        col1, col2, col3 = st.columns(3)
+        with col1:
+            color = st.selectbox("Water Color", options=["", "Clear", "Brown", "Green", "Other"])
+        with col2:
+            clarity = st.selectbox("Clarity", options=["", "Clear", "Murky"])
+        with col3:
+            odor = st.selectbox("Odor", options=["", "None", "Chemical", "Sewage", "Other"])
+
+        col1, col2, col3 = st.columns(3)
+        with col1:
+            rain = st.selectbox("Recent Rain", options=["", "No recent rain", "Light rain", "Heavy rain"])
+        with col2:
+            activity = st.selectbox("Nearby Activity", options=["", "Residential", "Industrial", "Agricultural", "None"])
+        with col3:
+            infrastructure = st.selectbox("Infrastructure", options=["", "Good condition", "Needs repair", "Unknown"])
+        context_parts = []
+
+        if color:
+            context_parts.append(f"The water appears {color.lower()} in color.")
+        if clarity:
+            context_parts.append(f"It is {clarity.lower()} in clarity.")
+        if odor:
+            context_parts.append(f"It has a {odor.lower()} odor.")
+
+        if rain:
+            context_parts.append(f"There was {rain.lower()}.")
+        if activity:
+            context_parts.append(f"The area nearby is {activity.lower()}.")
+        if infrastructure:
+            context_parts.append(f"The infrastructure is (in) {infrastructure.lower()}.")
+
+        # Combine original input + context
+        combined_description = user_text.strip() + " " + " ".join(context_parts)
+
+        # Edited text area with combined description from the select boxes and user input
+        edited_description = st.text_area("📝 Final Input to the Model (Editable)", value=combined_description, height=200)
+
+        col1, col2, col3 = st.columns(3)
+        with col3:
+            if st.button("Submit", type="primary", use_container_width=True):
+                # Only runs when Submit is clicked
+                if not edited_description or edited_description.strip() == "":
+                    st.warning("Please describe your concern in the text area above.")
                 else:
-                    st.error(f"⚠️ Water is predicted to be UNSAFE.\nConfidence: {probability:.2%}")
+                    prediction = nlp_pipeline.predict([edited_description])[0]
+                    probability = nlp_pipeline.predict_proba([edited_description])[0][prediction]
 
+                    # Map prediction to label
+                    label_map = {0: "Safe", 1: "Unsafe"}
+                    prediction_label = label_map[prediction]
 
+                    # Display result with appropriate style
+                    if prediction_label == "Safe":
+                        st.success(f"✅ Water is predicted to be SAFE.\nConfidence: {probability:.2%}")
+                    else:
+                        st.error(f"⚠️ Water is predicted to be UNSAFE.\nConfidence: {probability:.2%}")
 
-st.markdown("<br><br><br>", unsafe_allow_html=True)
+    with st.container(border=True):
+            st.caption("© 2025 CleanWaterAI. Data sourced from WPDx and other public datasets.")
 
-# Dashboard sections
-col1, col2, col3, col4, col5 = st.columns([1, 2, 2, 2, 1],gap="large")
-with col2:
-    with st.container():
-        st.subheader("Quick Insights")
-        st.text("")
-        
-        #Load data
-        csv_path = Path(__file__).parent / "data" / "environmental.csv"
-        df = pd.read_csv(csv_path)
-        df = df.dropna(subset=["latitude", "longitude"])
-        df.dropna(axis=1, how="all", inplace=True)
-        # Get unique locations
-        unique_locations = df["clean_adm2"].dropna().unique()
-        selected_location = st.selectbox("Select Location", sorted(unique_locations))
+elif page == "Quick Insights and Reports":
+    st.title("📊 Quick Insights and Reports")
+    st.markdown("Here is a quick snapshot of current water safety reports across regions.")
 
-        # Filter by location
-        filtered_df = df[df["clean_adm2"] == selected_location]
+    col1, col2, col3, col4, col5 = st.columns([1, 2, 2, 2, 1],gap="large")
+    with col2:
+        with st.container():
+            st.subheader("Quick Insights")
+            st.text("")
+            
+            #Load data
+            df = df.dropna(subset=["latitude", "longitude"])
+            df.dropna(axis=1, how="all", inplace=True)
 
-        # Risk score mapping
-        risk_labels = {
-            0: "🟢 Safe Quality",
-            1: "🟡 Low Risk",
-            2: "🟠 Medium Risk",
-            3: "🔴 High Risk"
-        }
+            # Ensure 'risk_score' exists
+            if 'risk_score' not in df.columns:
+                # Select the necessary feature columns for your model
+                # Replace this with the exact features your model expects
+                feature_columns = [
+                            "water_source_clean", "water_source_category", "water_tech_clean",
+                            "clean_adm1", "clean_adm2", "clean_adm3", "status_clean",
+                            "distance_to_primary", "distance_to_secondary", "distance_to_tertiary",
+                            "distance_to_city", "distance_to_town", "local_population", "served_population",
+                            "crucialness", "pressure", "staleness_score", "latitude", "longitude",
+                            "chirps_30_precipitation", "ndvi_30_NDVI", "lst_30_LST_Day_1km", "pop_population"
+                        ]
+                
+                try:
+                    X = df[feature_columns]
+                    df['risk_score'] = environmental_model.predict(X)
+                except Exception as e:
+                    st.error(f"Error predicting risk_score: {e}")
+                    st.stop()
+            # Get unique locations
+            unique_locations = df["clean_adm2"].dropna().unique()
+            selected_location = st.selectbox("Select Location", sorted(unique_locations))
 
-        # Calculate quick stats
-        num_stations = len(filtered_df)
-        most_common_risk = filtered_df["risk_score"].mode().iloc[0]
-        trend = "↗️ Slight increase"  # Optional: Replace with real trend logic later
+            # Filter by location
+            filtered_df = df[df["clean_adm2"] == selected_location]
 
-        # Show stats
-        st.text(f"Monitoring Stations: {num_stations} active")
-        st.text("")
-        st.text("Current Status:")
-        # Risk score summary
-        st.subheader(f"{selected_location} Risk Score Summary")
-        risk_counts = filtered_df["risk_score"].value_counts().sort_index()
-        for score, count in risk_counts.items():
-            label = risk_labels.get(score, f"Risk {score}")
-            st.text(f"{label}: {count}")
-with col3:
-    with st.container():
-        st.subheader("Latest Alerts")
-        st.text("")
-        st.text("🦠 Microbial contamination")
-        st.text("Kiambiu area • 2h ago")
-        st.text("")
-        st.text("🌊 High turbidity levels")
-        st.text("Industrial zone • 3h ago")
-        st.text("")
-        st.text("⚗️ Chemical levels elevated")
-        st.text("Industrial zone • 1d ago")
-        st.text("")
-        st.button("View All", key="view_alerts")
-with col4:
-    with st.container():
-        st.subheader("Reports & Analytics")
-        st.text("")
-        st.text("📈 Water Quality Trends")
-        st.text("Urban Areas • Jul 15")
-        st.text("")
-        st.text("🌍 Regional Analysis")
-        st.text("East Africa • Jun 30")
-        st.text("")
-        st.text("🏙️ Infrastructure Assessment")
-        st.text("CBD Systems • Jun 22")
-        st.text("")
-        st.button("View All", key="view_reports")
-        
-st.markdown("<br><br><br>", unsafe_allow_html=True)
-        
-# Geospatial Map Section
-with st.container(border=True):
-    st.markdown("<br>", unsafe_allow_html=True)
-    
-    header_cols = st.columns([.5, 10, .5]) 
-    with header_cols[1]:
-        st.header("🗺️ Water Contamination Risk Map")
-        st.text("Explore water quality risks in your area")
-    
-    st.text("")  
-    st.text("") 
-    
+            # Risk score mapping
+            risk_labels = {
+                0: "🟢 Safe Quality",
+                1: "🟡 Low Risk",
+                2: "🟠 Medium Risk",
+                3: "🔴 High Risk"
+            }
+
+            # Calculate quick stats
+            num_stations = len(filtered_df)
+            most_common_risk = filtered_df["risk_score"].mode().iloc[0]
+            trend = "↗️ Slight increase"  # Optional: Replace with real trend logic later
+
+            # Risk score summary
+            st.subheader(f"{selected_location} Risk Score Summary")
+            st.text(f"Monitoring Stations: {num_stations} active")
+            st.text("")
+            risk_counts_raw = filtered_df["risk_score"].value_counts().sort_index()
+            for score, count in risk_counts_raw.items():
+                label = risk_labels.get(score, f"Risk {score}")
+                st.text(f"{label}: {count}")
+
+            # Sort and drop zero-counts for pie chart
+            risk_counts = filtered_df["risk_score"].value_counts().reindex([0, 1, 2, 3], fill_value=0)
+            risk_counts = risk_counts[risk_counts > 0]  # Only keep non-zero risk levels
+
+            # Prepare labels and colors (only for present scores)
+            labels = [risk_labels.get(score) for score in risk_counts.index]
+            color_map = {0: 'green', 1: 'gold', 2: 'orange', 3: 'red'}
+            colors = [color_map[score] for score in risk_counts.index]
+
+            # Create pie chart
+            fig, ax = plt.subplots()
+            ax.pie(risk_counts, labels=labels, autopct="%1.1f%%", startangle=90, colors=colors)
+            ax.axis("equal")  # Make the pie chart circular
+
+            st.pyplot(fig)
+
+    with col3:
+        with st.container():
+            st.subheader("Latest Alerts")
+            st.text("")
+            st.text("🦠 Microbial contamination")
+            st.text("Kiambiu area • 2h ago")
+            st.text("")
+            st.text("🌊 High turbidity levels")
+            st.text("Industrial zone • 3h ago")
+            st.text("")
+            st.text("⚗️ Chemical levels elevated")
+            st.text("Industrial zone • 1d ago")
+            st.text("")
+            st.button("View All", key="view_alerts")
+    with col4:
+        with st.container():
+            st.subheader("Reports & Analytics")
+            st.text("")
+            st.text("📈 Water Quality Trends")
+            st.text("Urban Areas • Jul 15")
+            st.text("")
+            st.text("🌍 Regional Analysis")
+            st.text("East Africa • Jun 30")
+            st.text("")
+            st.text("🏙️ Infrastructure Assessment")
+            st.text("CBD Systems • Jun 22")
+            st.text("")
+            st.button("View All", key="view_reports")
+
+    with st.container(border=True):
+            st.caption("© 2025 CleanWaterAI. Data sourced from WPDx and other public datasets.")
+
+elif page == "Water Point Contamination Risk Map":
+    st.title("📍 Water Point Contamination Risk Map")
+    st.markdown("This map shows predicted contamination risk for water points based on environmental features.")
+
     map_cols = st.columns([.5, 10, .5])
     with map_cols[1]:
         with st.container(border=True):
             st.text("")
             
         #Load data
-        csv_path = Path(__file__).parent / "data" / "environmental.csv"
-        df = pd.read_csv(csv_path)
         df = df.dropna(subset=["latitude", "longitude"])
         df.dropna(axis=1, how="all", inplace=True)
 
-        #Add location name
-        df["location_name"] = (
-            df["clean_adm3"].fillna("") + ", " +
-            df["clean_adm2"].fillna("") + ", " +
-            df["clean_adm1"].fillna("")
-        )
-
         # Predict risk
         df["predicted_risk"] = model.predict(df)
-        
-        def risk_label(r):
-            return {
-                0: "🟢 Safe Quality",
-                1: "🟡 Low Risk",
-                2: "🟠 Medium Risk",
-                3: "🔴 High Risk"
-            }.get(r, "Unknown")
-
-        def risk_color(r):
-            return {
-                0: [0, 255, 0, 160],
-                1: [255, 255, 0, 160],
-                2: [255, 165, 0, 160],
-                3: [255, 0, 0, 160]
-            }.get(r, [128, 128, 128, 160])
 
         #print("📦 Available columns in df:", df.columns.tolist())
         #print(df.head())
@@ -305,6 +546,12 @@ with st.container(border=True):
         available_risks = sorted(df["risk_label"].unique().tolist())
         selected_risks = st.multiselect("Filter by risk level:", available_risks, default=available_risks)
         filtered_df = df[df["risk_label"].isin(selected_risks)]
+        if "location_name" not in filtered_df.columns:
+            filtered_df["location_name"] = (
+                filtered_df["clean_adm3"].fillna("") + ", " +
+                filtered_df["clean_adm2"].fillna("") + ", " +
+                filtered_df["clean_adm1"].fillna("")
+            )
 
         # Handle case where no points are selected — show blank map
         if filtered_df.empty:
@@ -319,7 +566,11 @@ with st.container(border=True):
             )
 
             # Set empty DataFrame for rendering
-            filtered_df = pd.DataFrame(columns=["latitude", "longitude", "location_name", "color", "risk_label"])
+            filtered_df = pd.DataFrame(columns=[
+                "latitude", "longitude", "location_name", "color", "risk_label",
+                "quality_score", "risk_level", "local_population",
+                "contamination_type", "served_population"
+            ])
         else:
             view_state = pdk.ViewState(
                 latitude=filtered_df["latitude"].mean(),
@@ -354,10 +605,10 @@ with st.container(border=True):
         ))
 
         # Point selector and detail box
-        if not filtered_df.empty:
+        if not filtered_df.empty and 'location_name' in filtered_df.columns:
             selected_point = st.selectbox(
                 "Select a monitoring point for details:",
-                options=filtered_df['location_name'].tolist()
+                options=filtered_df['location_name'].dropna().tolist()
             )
 
             if selected_point:
@@ -372,10 +623,12 @@ with st.container(border=True):
                     with detail_col1:
                         st.metric("Quality Score", f"{point_data.get('quality_score', 'N/A')}/100")
                         st.text(f"Risk Level: {point_data.get('risk_level', 'Unknown')}")
+                        st.text(f"Local Population: {point_data.get('local_population', 'N/A')}")
 
                     with detail_col2:
                         st.text(f"Contamination: {point_data.get('contamination_type', 'Not available')}")
                         st.text(f"Location: {point_data['latitude']:.4f}, {point_data['longitude']:.4f}")
+                        st.text(f"Served Population: {point_data.get('served_population', 'N/A')}")
 
                     st.text("")
                     st.text("")
@@ -385,37 +638,6 @@ with st.container(border=True):
             # Add bottom padding
             st.text("")
     
-    st.text("")  # Vertical spacing
-    st.text("")  # Additional vertical spacing
-    
-    subheader_cols = st.columns([.5, 10, .5])  # Reverted to 0.5 padding
-    with subheader_cols[1]:
-        st.subheader("Showing water quality monitoring data for 🇰🇪Kenya")
-
-    outer_cols = st.columns([.5, 10, .5])  # Consistent 0.5 padding
-    with outer_cols[1]:
-        row1_cols = st.columns([6, 6])
-        with row1_cols[0]:
-            with st.expander("🔴 High Risk", expanded=True):
-                st.text("Areas with severe contamination")
-                st.text("Immediate action required")
-        
-        with row1_cols[1]:
-            with st.expander("🟠 Medium Risk", expanded=True):
-                st.text("Areas with concerning levels")
-                st.text("Regular monitoring needed")
-        
-        row2_cols = st.columns([6, 6])
-        with row2_cols[0]:
-            with st.expander("🟡 Low Risk", expanded=True):
-                st.text("Areas with minor issues")
-                st.text("Routine testing recommended")
-        
-        with row2_cols[1]:
-            with st.expander("🟢 Safe Quality", expanded=True):
-                st.text("Areas meeting all standards")
-                st.text("No action required")
-
     st.text("")  # Vertical spacing
     st.text("")  # Additional vertical spacing
     
@@ -444,169 +666,203 @@ with st.container(border=True):
     st.markdown("<br>", unsafe_allow_html=True)
     st.markdown("<br>", unsafe_allow_html=True)
 
-# 📊 Latest Public Water Data Section
-st.header("📊 Latest Public Water Data")
-data_cols = st.columns([.5, 10, .5])
-with data_cols[1]:
-    st.text("Showing the most recent water point data with model-predicted risk levels")
-    st.text("Last updated: August 3, 2025")
-    st.text("")
-
     with st.container(border=True):
-        data_tab1, data_tab2, data_tab3, data_tab4 = st.tabs(["All Data", "Functional Status", "Risk Analysis", "Quality Trend"])
-        
-        # TAB 1: ALL DATA
-        with data_tab1:
-            st.dataframe(
-                df,
-                column_config={
-                    "water_point_id": "Water Point ID",
-                    "country_name": "Country",
-                    "region": "Region",
-                    "district": "District",
-                    "water_source": "Water Source",
-                    "status": st.column_config.SelectboxColumn(
-                        "Status",
-                        help="Operational status of the water point",
-                        width="medium",
-                        options=[
-                            "Functional",
-                            "Non-functional",
-                            "Needs repair"
-                        ]
-                    ),
-                    "date_installed": st.column_config.DateColumn(
-                        "Installation Date",
-                        format="MMM DD, YYYY",
-                    ),
-                    "latest_record": st.column_config.DateColumn(
-                        "Last Updated",
-                        format="MMM DD, YYYY",
-                    ),
-                    "water_quality": "Water Quality",
-                    "risk_score": st.column_config.ProgressColumn(
-                        "Risk Score",
-                        help="Higher score = lower risk",
-                        format="%d",
-                        min_value=0,
-                        max_value=100,
-                    ),
-                    "risk_level": "Risk Level"
-                },
-                hide_index=True,
-                use_container_width=True
-            )
+            st.caption("© 2025 CleanWaterAI. Data sourced from WPDx and other public datasets.")
 
-        # TAB 2: FUNCTIONAL STATUS
-        def clean_status(status):
-            status = status.strip().lower()
+elif page == "Water Point Data Analysis":
+    st.title("🔬 Data Analysis")
+    st.write("Explore and analyze water point datasets.")
 
-            if "non-functional" in status:
-                return "Non-Functional"
-            elif "functional" in status:
-                return "Functional"
-            elif "abandoned" in status or "decommissioned" in status:
-                return "Decommissioned"
-            else:
-                return "Unknown"
+    if "risk_label_clean" not in df.columns:
+        # If "predicted_risk" not already computed:
+        if "predicted_risk" not in df.columns:
+            df["predicted_risk"] = model.predict(df)
 
-        df['status_clean'] = df['status_clean'].fillna("Unknown").apply(clean_status)
+        df["risk_label"] = df["predicted_risk"].apply(risk_label)
 
-        with data_tab2:
-            status_counts = df['status_clean'].value_counts().reset_index()
-            status_counts.columns = ['Status', 'Count']
+        df["risk_label_clean"] = df["risk_label"].replace({
+            "🔴 High Risk": "High Risk",
+            "🟠 Medium Risk": "Medium Risk",
+            "🟡 Low Risk": "Low Risk",
+            "🟢 Safe Quality": "Safe Quality"
+        })
 
+        df["risk_level"] = df["risk_label_clean"]
+
+
+    data_cols = st.columns([.5, 10, .5])
+    with data_cols[1]:
+        st.text("Showing the most recent water point data with model-predicted risk levels")
+        st.text("Last updated: August 3, 2025")
+        st.text("")
+
+        with st.container(border=True):
+            data_tab1, data_tab2, data_tab3, data_tab4 = st.tabs(["All Data", "Functional Status", "Risk Analysis", "Quality Trend"])
             
-            st.bar_chart(status_counts, x='Status', y='Count')
-            
-            st.text("Filter data by status:")
-            status_filter = st.multiselect(
-                "Select status to view:",
-                options=df['status_clean'].unique(),
-                default=df['status_clean'].unique()
-            )
-            
-            filtered_status_data = df[df['status_clean'].isin(status_filter)]
-            st.dataframe(filtered_status_data, hide_index=True, use_container_width=True)
+            # TAB 1: ALL DATA
+            with data_tab1:
+                st.dataframe(
+                    df,
+                    column_config={
+                        "water_point_id": "Water Point ID",
+                        "country_name": "Country",
+                        "region": "Region",
+                        "district": "District",
+                        "water_source": "Water Source",
+                        "status": st.column_config.SelectboxColumn(
+                            "Status",
+                            help="Operational status of the water point",
+                            width="medium",
+                            options=[
+                                "Functional",
+                                "Non-functional",
+                                "Needs repair"
+                            ]
+                        ),
+                        "date_installed": st.column_config.DateColumn(
+                            "Installation Date",
+                            format="MMM DD, YYYY",
+                        ),
+                        "latest_record": st.column_config.DateColumn(
+                            "Last Updated",
+                            format="MMM DD, YYYY",
+                        ),
+                        "water_quality": "Water Quality",
+                        "risk_score": st.column_config.ProgressColumn(
+                            "Risk Score",
+                            help="Higher score = lower risk",
+                            format="%d",
+                            min_value=0,
+                            max_value=100,
+                        ),
+                        "risk_level": "Risk Level"
+                    },
+                    hide_index=True,
+                    use_container_width=True
+                )
 
-        # TAB 3: RISK ANALYSIS
-        with data_tab3:
-            risk_counts = df['risk_level'].value_counts().reset_index()
-            risk_counts.columns = ['Risk Level', 'Count']
+            # TAB 2: FUNCTIONAL STATUS
+            def clean_status(status):
+                status = status.strip().lower()
 
-            st.text("Average Risk Score by Region")
-            region_risk = df.groupby('clean_adm1')['risk_score'].mean().reset_index()
-            region_risk.columns = ['Region', 'Average Risk Score']
+                if "non-functional" in status:
+                    return "Non-Functional"
+                elif "functional" in status:
+                    return "Functional"
+                elif "abandoned" in status or "decommissioned" in status:
+                    return "Decommissioned"
+                else:
+                    return "Unknown"
 
-            st.bar_chart(region_risk, x='Region', y='Average Risk Score')
+            df['status_clean'] = df['status_clean'].fillna("Unknown").apply(clean_status)
 
-            st.text("Filter data by risk level:")
-            risk_filter = st.multiselect(
-                "Select risk level to view:",
-                options=df['risk_level'].unique(),
-                default=df['risk_level'].unique()
-            )
+            with data_tab2:
+                status_counts = df['status_clean'].value_counts().reset_index()
+                status_counts.columns = ['Status', 'Count']
 
-            filtered_risk_data = df[df['risk_level'].isin(risk_filter)]
-            st.dataframe(filtered_risk_data, hide_index=True, use_container_width=True)
+                
+                st.bar_chart(status_counts, x='Status', y='Count')
+                
+                st.text("Filter data by status:")
+                status_filter = st.multiselect(
+                    "Select status to view:",
+                    options=df['status_clean'].unique(),
+                    default=df['status_clean'].unique()
+                )
+                
+                filtered_status_data = df[df['status_clean'].isin(status_filter)]
+                st.dataframe(filtered_status_data, hide_index=True, use_container_width=True)
 
-        # TAB 4: QUALITY TREND
-        with data_tab4:
-            st.text("Water Quality Trend Over Time")
-            st.text("")
+            # TAB 3: RISK ANALYSIS
+            with data_tab3:
+                if "risk_level" not in df.columns:
+                    df = add_risk_metadata(df)
 
-            # ✅ Step 1: Define the new column (do this outside any widget)
-            df['point_id'] = df['location_name'].fillna('Unnamed') + ' (' + df['latitude'].astype(str) + ', ' + df['longitude'].astype(str) + ')'
+                risk_counts = df['risk_level'].value_counts().reset_index()
+                risk_counts.columns = ['Risk Level', 'Count']
 
-            # ✅ Step 2: Use it in the selectbox
-            selected_water_point = st.selectbox(
-                "Select a water point to view quality trend:",
-                options=df['point_id'].tolist()
-            )
+                st.text("Average Risk Score by Region")
+                region_risk = df.groupby('clean_adm1')['risk_score'].mean().reset_index()
+                region_risk.columns = ['Region', 'Average Risk Score']
+
+                st.bar_chart(region_risk, x='Region', y='Average Risk Score')
 
 
-            if selected_water_point:
-                point_data = df[df['point_id'] == selected_water_point].iloc[0]
 
-                st.text(f"30-day quality trend for {selected_water_point}")
+                st.text("Filter data by risk level:")
+                risk_filter = st.multiselect(
+                    "Select risk level to view:",
+                    options=df['risk_level'].unique(),
+                    default=df['risk_level'].unique()
+                )
+
+                filtered_risk_data = df[df['risk_level'].isin(risk_filter)]
+                st.dataframe(filtered_risk_data, hide_index=True, use_container_width=True)
+
+            # TAB 4: QUALITY TREND
+            with data_tab4:
+                st.text("Water Quality Trend Over Time")
                 st.text("")
 
-                days = 30
-                dates = pd.date_range(end=pd.Timestamp.now(), periods=days)
+                # ✅ Step 1: Define the new column (do this outside any widget)
+                # Ensure 'location_name' exists before generating 'point_id'
+                if 'location_name' not in df.columns:
+                    df['location_name'] = (
+                        df['clean_adm3'].fillna('') + ', ' +
+                        df['clean_adm2'].fillna('') + ', ' +
+                        df['clean_adm1'].fillna('')
+                    )
+                df['point_id'] = df['location_name'].fillna('Unnamed') + ' (' + df['latitude'].astype(str) + ', ' + df['longitude'].astype(str) + ')'
 
-                base_quality = point_data['risk_score']
-                noise = np.random.normal(0, 5, days)
-                trend = np.linspace(-10, 10, days)
+                # ✅ Step 2: Use it in the selectbox
+                selected_water_point = st.selectbox(
+                    "Select a water point to view quality trend:",
+                    options=df['point_id'].tolist()
+                )
 
-                quality_trend = np.clip(base_quality + trend + noise, 0, 100)
 
-                trend_data = pd.DataFrame({
-                    'date': dates,
-                    'quality': quality_trend
-                })
+                if selected_water_point:
+                    point_data = df[df['point_id'] == selected_water_point].iloc[0]
 
-                st.line_chart(trend_data.set_index('date'))
+                    st.text(f"30-day quality trend for {selected_water_point}")
+                    st.text("")
 
-                avg_quality = quality_trend.mean()
-                st.text(f"Average Quality Score: {avg_quality:.1f}/100")
+                    days = 30
+                    dates = pd.date_range(end=pd.Timestamp.now(), periods=days)
 
-                if trend[-1] > trend[0]:
-                    st.text("Trend: ↗️ Improving")
-                elif trend[-1] < trend[0]:
-                    st.text("Trend: ↘️ Declining")
-                else:
-                    st.text("Trend: → Stable")
+                    base_quality = point_data['risk_score']
+                    noise = np.random.normal(0, 5, days)
+                    trend = np.linspace(-10, 10, days)
 
-        # CSV download
-        csv = df.to_csv(index=False)
-        st.download_button(
-            label="Download Full Water Data (CSV)",
-            data=csv,
-            file_name="cleanwat_ai_water_data.csv",
-            mime="text/csv"
-        )
+                    quality_trend = np.clip(base_quality + trend + noise, 0, 100)
 
-        st.text("")
-        st.text("")
-        with st.container(border=True):
-            st.caption("© 2025 CleanWaterAI. Data sourced from WPDx and other public datasets.")
+                    trend_data = pd.DataFrame({
+                        'date': dates,
+                        'quality': quality_trend
+                    })
+
+                    st.line_chart(trend_data.set_index('date'))
+
+                    avg_quality = quality_trend.mean()
+                    st.text(f"Average Quality Score: {avg_quality:.1f}/100")
+
+                    if trend[-1] > trend[0]:
+                        st.text("Trend: ↗️ Improving")
+                    elif trend[-1] < trend[0]:
+                        st.text("Trend: ↘️ Declining")
+                    else:
+                        st.text("Trend: → Stable")
+
+            # CSV download
+            csv = df.to_csv(index=False)
+            st.download_button(
+                label="Download Full Water Data (CSV)",
+                data=csv,
+                file_name="cleanwat_ai_water_data.csv",
+                mime="text/csv"
+            )
+
+            st.text("")
+            st.text("")
+            with st.container(border=True):
+                st.caption("© 2025 CleanWaterAI. Data sourced from WPDx and other public datasets.")
