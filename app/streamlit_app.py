@@ -297,8 +297,7 @@ if page == "Home":
             We are a team of data scientists who believe that Artificial Intelligence shouldn't just be smart — it should be <i>human-aware</i>.  
             CleanWatAI was born from a simple but powerful idea: that hidden within scattered news reports around the world are stories that warn us — if only we had the tools to hear them.  
             <br><br>
-            We use Natural Language Processing (NLP) to analyze global water-related news and identify phrases that signal contamination, danger, or crisis.  
-            But we didn’t stop at building a classifier. We built a <i>solution</i> — one that merges structured data, geographical intelligence, and machine learning into a real-time, explainable, and deployed model.  
+            At the heart of CleanWatAI is our predictive engine for assessing water point contamination risk. By combining environmental data, infrastructure reports, and machine learning models, we identify high-risk areas before crises unfold. Our goal is to provide communities, NGOs, and policymakers with early warnings, enabling faster response, resource prioritization, and ultimately — safer water for all.  
             <br><br>
             Our project doesn’t just predict — it <i>prevents</i>.  
             It gives a voice to forgotten communities and empowers decision-makers with clarity before disaster strikes.
