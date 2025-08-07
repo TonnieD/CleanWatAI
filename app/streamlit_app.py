@@ -104,11 +104,11 @@ vision_img = ASSETS_DIR / "vision.jpeg"
 
 # Team avatars
 team_members = {
-    "Anthony": ASSETS_DIR / "anthony.png",
-    "Lewis": ASSETS_DIR / "lewis.png",
-    "Phanela": ASSETS_DIR / "phanela.png",
-    "Margaret": ASSETS_DIR / "maggie.png",
-    "Diana": ASSETS_DIR / "diana.png",
+    "Anthony": ASSETS_DIR / "anthony.jpeg",
+    "Lewis": ASSETS_DIR / "lewis.jpeg",
+    "Phanela": ASSETS_DIR / "phanela.jpeg",
+    "Margaret": ASSETS_DIR / "maggie.jpeg",
+    "Diana": ASSETS_DIR / "diana.jpeg",
 }
 
 # Social/contact icons
@@ -118,15 +118,6 @@ social_icons = {
     "Twitter": ASSETS_DIR / "twitter.jpeg",
     "LinkedIn": ASSETS_DIR / "linkedin.jpeg"
 }
-
-ASSETS_DIR = Path(__file__).parent / "images"
-
-st.write("🔍 Looking for images in:", ASSETS_DIR)
-if not ASSETS_DIR.exists():
-    st.error("❌ The images directory was not found.")
-else:
-    st.success("✅ Images directory found!")
-    st.write("📁 Files in images/:", list(ASSETS_DIR.glob("*")))
 
 # Sidebar to choose data source
 st.sidebar.markdown("### 📁 Data Source")
