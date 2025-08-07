@@ -102,13 +102,13 @@ mission_img = ASSETS_DIR / "mission.jpeg"
 vision_img = ASSETS_DIR / "vision.jpeg"
 
 # Team avatars
-team_imgs = [
-    ASSETS_DIR / "avatar1.jpeg",
-    ASSETS_DIR / "avatar2.jpeg",
-    ASSETS_DIR / "avatar3.jpeg",
-    ASSETS_DIR / "avatar4.jpeg",
-    ASSETS_DIR / "avatar5.jpeg",
-]
+team_members = {
+    "Anthony": ASSETS_DIR / "anthony.png",
+    "Lewis": ASSETS_DIR / "lewis.png",
+    "Phanela": ASSETS_DIR / "phanela.png",
+    "Margaret": ASSETS_DIR / "maggie.png",
+    "Diana": ASSETS_DIR / "diana.png",
+}
 
 # Social/contact icons
 social_icons = {
@@ -268,11 +268,16 @@ if page == "Home":
     st.markdown("---")
 
     # --- Meet the Team Section ---
-    st.markdown("## 👥 Meet the Team")
-    cols = st.columns(len(team_imgs))
-    for i, img_path in enumerate(team_imgs):
-        with cols[i]:
-            st.image(img_path, use_container_width=True, caption=f"Team Member {i+1}")
+    st.subheader("👨‍👩‍👧 Meet the Team")
+
+    cols = st.columns(len(team_members))
+
+    for col, (name, image_path) in zip(cols, team_members.items()):
+        try:
+            with col:
+                st.image(Image.open(image_path), caption=name, use_container_width=True)
+        except Exception as e:
+            st.error(f"Error loading image for {name}: {e}")
 
     st.markdown("---")
 
