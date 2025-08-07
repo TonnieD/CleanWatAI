@@ -93,6 +93,31 @@ def load_main_data():
 def load_custom_data(uploaded_file):
     return pd.read_csv(uploaded_file)
 
+# Base path (adjust if your assets are deeper, e.g., in "assets/images/")
+ASSETS_DIR = Path(__file__).parent / "assets"
+
+# Individual image paths
+about_img = ASSETS_DIR / "about.jpeg"
+mission_img = ASSETS_DIR / "mission.jpeg"
+vision_img = ASSETS_DIR / "vision.jpeg"
+
+# Team avatars
+team_imgs = [
+    ASSETS_DIR / "avatar1.jpeg",
+    ASSETS_DIR / "avatar2.jpeg",
+    ASSETS_DIR / "avatar3.jpeg",
+    ASSETS_DIR / "avatar4.jpeg",
+    ASSETS_DIR / "avatar5.jpeg",
+]
+
+# Social/contact icons
+social_icons = {
+    "Email": ASSETS_DIR / "email.jpeg",
+    "Phone": ASSETS_DIR / "phone.jpeg",
+    "Twitter": ASSETS_DIR / "twitter.jpeg",
+    "LinkedIn": ASSETS_DIR / "linkedin.jpeg"
+}
+
 # Sidebar to choose data source
 st.sidebar.markdown("### 📁 Data Source")
 data_choice = st.sidebar.radio(
@@ -212,16 +237,66 @@ else:
 
 # Route to selected page
 if page == "Home":
-    st.title("Welcome to CleanWatAI 💧")
-    st.markdown("""
-    CleanWatAI is a predictive analytics tool helping identify water quality risks in rural communities.
-    
-    Use the sidebar to:
-    - Classify water reports (NLP)
-    - View data insights and trends
-    - Visualize contamination risk maps
-    - Explore raw water point data
-    """)
+    # Page config
+    st.set_page_config(page_title="CleanWatAI | Home", layout="wide")
+
+    # --- About Section ---
+    st.markdown("## 🧼 About CleanWatAI")
+    col1, col2 = st.columns([1, 2])
+    with col1:
+        st.image(about_img, use_column_width=True)
+    with col2:
+        st.write("""
+        CleanWatAI is an innovative initiative leveraging AI to ensure safe and accessible water 
+        for all. We combine geospatial, environmental, and natural language data to predict and 
+        prevent water contamination in rural communities.
+        """)
+
+    st.markdown("---")
+
+    # --- Mission Section ---
+    st.markdown("## 🎯 Mission")
+    col1, col2 = st.columns([2, 1])
+    with col1:
+        st.write("""
+        Our mission is to empower underserved communities with AI-driven tools that predict water 
+        contamination risks and promote data-informed public health interventions.
+        """)
+    with col2:
+        st.image(mission_img, use_column_width=True)
+
+    st.markdown("---")
+
+    # --- Meet the Team Section ---
+    st.markdown("## 👥 Meet the Team")
+    cols = st.columns(len(team_imgs))
+    for i, img_path in enumerate(team_imgs):
+        with cols[i]:
+            st.image(img_path, use_column_width=True, caption=f"Team Member {i+1}")
+
+    st.markdown("---")
+
+    # --- Vision Section ---
+    st.markdown("## 🔮 Vision")
+    col1, col2 = st.columns([1, 2])
+    with col1:
+        st.image(vision_img, use_column_width=True)
+    with col2:
+        st.write("""
+        To be the leading open-source platform advancing water safety in low-resource settings 
+        through responsible, transparent, and community-centered AI innovation.
+        """)
+
+    st.markdown("---")
+
+    # --- Contact Section ---
+    st.markdown("## 📞 Contact Us")
+    contact_cols = st.columns(4)
+    for i, (label, icon_path) in enumerate(social_icons.items()):
+        with contact_cols[i]:
+            st.image(icon_path, width=40)
+            st.caption(label)
+
 
 elif page == "NLP Page":
     st.title("🧠 NLP-Based Water Report Classification")

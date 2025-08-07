@@ -9,3 +9,4 @@ seaborn
 nltk
 imbalanced-learn
 xgboost
+Pillow
