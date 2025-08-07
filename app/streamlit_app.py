@@ -16,6 +16,41 @@ import sys
 import os
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
+
+
+
+all_demo_cases = [
+    {'name': 'Select a scenario matching your area', 'description': '', 'expected': '', 'inputs': {'pH': 7.4, 'TEMP': 22.0, 'EC': 350.0}},
+    {'name': 'Clean Borehole Water', 'description': 'A properly maintained borehole with good mineral balance.', 'expected': 'Safe', 'inputs': {'pH': 7.4, 'TEMP': 21.0, 'EC': 350.0}},
+    {'name': 'Urban River Contamination', 'description': 'River water downstream from a dense urban area.', 'expected': 'Action Required', 'inputs': {'pH': 7.9, 'TEMP': 26.0, 'EC': 1800.0}},
+    {'name': 'Rift Valley Mineral Spring', 'description': 'Geothermal spring with high natural mineral content.', 'expected': 'Action Required', 'inputs': {'pH': 8.8, 'TEMP': 35.0, 'EC': 2200.0}},
+    {'name': 'High-Altitude Forest Stream', 'description': 'Cold, pristine stream in a protected forest.', 'expected': 'Safe', 'inputs': {'pH': 7.1, 'TEMP': 16.0, 'EC': 250.0}},
+    {'name': 'Livestock Watering Dam', 'description': 'Community dam with high livestock concentration.', 'expected': 'Action Required', 'inputs': {'pH': 8.3, 'TEMP': 29.0, 'EC': 1900.0}},
+    {'name': 'Industrial Wastewater Discharge', 'description': 'Water downstream from a factory with chemical runoff.', 'expected': 'Action Required', 'inputs': {'pH': 5.8, 'TEMP': 32.0, 'EC': 2800.0}},
+    {'name': 'Shallow Well (Farming Area)', 'description': 'Hand-dug well in an area with heavy fertilizer use.', 'expected': 'Action Required', 'inputs': {'pH': 8.4, 'TEMP': 24.0, 'EC': 1400.0}},
+    {'name': 'Municipal Tap Water', 'description': 'Treated municipal water supply.', 'expected': 'Safe', 'inputs': {'pH': 7.2, 'TEMP': 22.0, 'EC': 420.0}},
+    {'name': 'Acid Mine Drainage', 'description': 'Runoff from an abandoned mine with heavy metals.', 'expected': 'Action Required', 'inputs': {'pH': 4.2, 'TEMP': 28.0, 'EC': 3500.0}},
+    {'name': 'Premium Bottled Water', 'description': 'Commercial bottled water from a reputable brand.', 'expected': 'Safe', 'inputs': {'pH': 7.0, 'TEMP': 20.0, 'EC': 180.0}}
+]
+case_names = [case['name'] for case in all_demo_cases]
+DEFAULT_ENCODED_VALUE = 0 
+
+if 'ph' not in st.session_state:
+    st.session_state.ph = all_demo_cases[0]['inputs']['pH']
+    st.session_state.temp = all_demo_cases[0]['inputs']['TEMP']
+    st.session_state.ec = all_demo_cases[0]['inputs']['EC']
+    st.session_state.description = all_demo_cases[0]['description']
+
+def update_state_from_selection():
+    selected_case_name = st.session_state.case_selection
+    for case in all_demo_cases:
+        if case['name'] == selected_case_name:
+            st.session_state.ph = case['inputs']['pH']
+            st.session_state.temp = case['inputs']['TEMP']
+            st.session_state.ec = case['inputs']['EC']
+            st.session_state.description = case['description']
+            break
+        
 # Define a single, persistent location for NLTK data
 NLTK_PATH = os.path.join("app", "nltk_data")
 os.makedirs(NLTK_PATH, exist_ok=True)
@@ -82,8 +117,14 @@ def load_env_model():
     path = Path(__file__).parent / "models" / "environmental.pkl"
     return joblib.load(path)
 
+@st.cache_resource
+def load_water_quality_model():
+    path = Path(__file__).parent / "models" / "water_quality_pipeline.pkl"
+    return joblib.load(path)
+    
 nlp_pipeline = load_nlp_model() # NLP pipeline
 model = load_env_model() # Environmental model
+water_quality_pipeline = load_water_quality_model() # Water quality model
 
 @st.cache_data
 def load_main_data():
@@ -185,6 +226,7 @@ page = st.sidebar.radio("Go to", [
     "NLP Page",
     "Quick Insights and Reports",
     "Water Point Contamination Risk Map",
+    "Water Contamination Based on Cheap Sensors",
     "Water Point Data Analysis"
 ])
 
@@ -247,26 +289,37 @@ if page == "Home":
     with col1:
         st.image(about_img, use_container_width=True)
     with col2:
-        st.write(
+        st.markdown(
             """
-        Water is life. Yet for millions, that life is silently threatened every day by 
-        contaminated sources, failing infrastructure, and overlooked early signs. At CleanWatAI, 
-        we set out to change that — by teaching machines to listen when people speak about water.
-
-        We are a team of data scientists who believe that Artificial Intelligence shouldn't just 
-        be smart — it should be human-aware. CleanWatAI was born from a simple but powerful 
-        idea: that hidden within scattered news reports around the world are stories that warn us — 
-        if only we had the tools to hear them.
-
-        We use Natural Language Processing (NLP) to analyze global water-related news and identify 
-        phrases that signal contamination, danger, or crisis. But we didn’t stop at building a 
-        classifier. We built a solution — one that merges structured data, geographical 
-        intelligence, and machine learning into a real-time, explainable, and deployed model.
-
-        Our project doesn’t just predict — it prevents. It gives a voice to forgotten communities 
-        and empowers decision-makers with clarity before disaster strikes.
-        """
+            <div style='font-size: 22px; line-height: 1.6'>
+                Water is life. Yet for millions, that life is silently threatened every 
+                day by contaminated sources, failing infrastructure, and overlooked 
+                early signs.  
+                At CleanWatAI, we set out to change that — by teaching machines to 
+                listen when people speak about water.  
+                <br><br>
+                We are a team of data scientists who believe that Artificial Intelligence 
+                shouldn't just be smart — it should be <i>human-aware</i>.  
+                CleanWatAI was born from a simple but powerful idea: that hidden within 
+                scattered news reports around the world are stories that warn us — if only 
+                we had the tools to hear them.  
+                <br><br>
+                At the heart of CleanWatAI is our predictive engine for assessing water 
+                point contamination risk. By combining environmental data, infrastructure 
+                reports, and machine learning models, we identify high-risk areas before 
+                crises unfold. Our goal is to provide communities, NGOs, and policymakers 
+                with early warnings, enabling faster response, resource prioritization, and 
+                ultimately — safer water for all.  
+                <br><br>
+                Our project doesn’t just predict — it <i>prevents</i>.  
+                It gives a voice to forgotten communities and empowers decision-makers 
+                with clarity before disaster strikes.
+            </div>
+            """,
+            unsafe_allow_html=True
         )
+
+
 
 
     st.markdown("---")
@@ -275,13 +328,11 @@ if page == "Home":
     st.markdown("## 🎯 Mission")
     col1, col2 = st.columns([2, 1])
     with col1:
-        st.write(
-            """
-        To harness the power of Natural Language Processing and data science to detect, 
-        visualize, and prevent water contamination risks — empowering communities and 
-        organizations with early, actionable insights.
-        """
-        )
+        st.markdown("""
+            <div style='font-size: 24px; line-height: 1.6'>
+            To harness the power of Natural Language Processing and data science to detect, visualize, and prevent water contamination risks — empowering communities and organizations with early, actionable insights.
+            </div>
+            """, unsafe_allow_html=True)
     with col2:
         st.image(mission_img, use_container_width=True)
 
@@ -307,15 +358,12 @@ if page == "Home":
     with col1:
         st.image(vision_img, use_container_width=True)
     with col2:
-        st.write(
-            """
-        A world where no community is left vulnerable to water-related dangers because 
-        warnings were missed, unheard, or too late.  
-
-        A future where Artificial Intelligence doesn’t just predict outcomes — 
-        it protects lives.
-        """
-        )
+        st.markdown("""
+            <div style='font-size: 24px; line-height: 1.6'>
+            A world where no community is left vulnerable to water-related dangers because warnings were missed, unheard, or too late.  
+            A future where Artificial Intelligence doesn’t just predict outcomes — it <i>protects lives</i>.
+            </div>
+            """, unsafe_allow_html=True)
 
     st.markdown("---")
 
@@ -400,7 +448,7 @@ elif page == "Quick Insights and Reports":
     st.title("📊 Quick Insights and Reports")
     st.markdown("Here is a quick snapshot of current water safety reports across regions.")
 
-    col1, col2, col3, col4, col5 = st.columns([1, 2, 2, 2, 1],gap="large")
+    col1, col2, col3, col4, col5 = st.columns([.25, 2, 2, 2, .25],gap="medium")
     with col2:
         with st.container():
             st.subheader("Quick Insights")
@@ -425,7 +473,7 @@ elif page == "Quick Insights and Reports":
                 
                 try:
                     X = df[feature_columns]
-                    df['risk_score'] = environmental_model.predict(X)
+                    df['risk_score'] = model.predict(X)
                 except Exception as e:
                     st.error(f"Error predicting risk_score: {e}")
                     st.stop()
@@ -668,6 +716,73 @@ elif page == "Water Point Contamination Risk Map":
 
     with st.container(border=True):
             st.caption("© 2025 CleanWaterAI. Data sourced from WPDx and other public datasets.")
+
+elif page == "Water Contamination Based on Cheap Sensors":
+    st.title("🔬 Anomaly Detection for Water Quality")
+    st.markdown("Assess water quality based on chemical content using pH, temperature, and electrical conductivity measurements.")
+
+    with st.container(border=True):
+        st.text("")
+        st.text("")
+        
+        col1, col2,col3,col4 = st.columns([.25,1, 1,.25], gap="small")
+        with col2:
+         
+            st.selectbox(
+                "Load a Pre-built Scenario",
+                options=case_names,
+                key='case_selection',
+                on_change=update_state_from_selection
+            )
+
+            st.subheader("Cheap Sensor Inputs")
+            ph_val = st.number_input("pH Level", min_value=0.0, max_value=14.0, value=st.session_state.ph, step=0.1)
+            temp_val = st.number_input("Temperature (°C)", min_value=0.0, max_value=100.0, value=st.session_state.temp, step=0.5)
+            ec_val = st.number_input("Electrical Conductivity (µS/cm)", min_value=0.0, max_value=10000.0, value=st.session_state.ec, step=10.0)
+
+            if st.button("Check Risk", type="primary", use_container_width=True):
+                inputs_dict = {
+                    'pH': ph_val,
+                    'TEMP': temp_val,
+                    'EC': ec_val,
+                    'station_encoded': DEFAULT_ENCODED_VALUE
+                }
+                inputs_df = pd.DataFrame([inputs_dict])
+                risk_score = water_quality_pipeline.predict_risk(inputs_df)[0]
+                st.session_state.risk_score = risk_score
+                st.session_state.last_case_checked = st.session_state.case_selection
+
+        with col3:
+            if 'risk_score' in st.session_state:
+                with st.container(border=True):
+                    risk_score = st.session_state.risk_score
+                    last_case_name = st.session_state.last_case_checked
+                    
+                    # Find the expected outcome for the tested case
+                    expected_outcome = "N/A"
+                    for case in all_demo_cases:
+                        if case['name'] == last_case_name:
+                            expected_outcome = case['expected']
+                            break
+                    
+                    st.subheader(f"Results")
+                    predicted_outcome = "Action Required" if risk_score > 0.5 else "Safe"
+                    
+                    st.metric(label="Chemically Predicted Risk Score", value=f"{risk_score:.3f}")
+
+                    if predicted_outcome == "Action Required":
+                        st.error(f"Verdict: {predicted_outcome}")
+                    else:
+                        st.success(f"Verdict: {predicted_outcome}")
+
+        
+        st.text("")
+        st.text("")   
+                        
+
+    with st.container(border=True):
+        st.caption("© 2025 CleanWaterAI. Data sourced from WPDx and other public datasets.")
+
 
 elif page == "Water Point Data Analysis":
     st.title("🔬 Data Analysis")
