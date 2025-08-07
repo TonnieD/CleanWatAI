@@ -244,7 +244,7 @@ if page == "Home":
     st.markdown("## 🧼 About CleanWatAI")
     col1, col2 = st.columns([1, 2])
     with col1:
-        st.image(about_img, use_column_width=True)
+        st.image(about_img, use_container_width=True)
     with col2:
         st.write("""
         CleanWatAI is an innovative initiative leveraging AI to ensure safe and accessible water 
@@ -263,7 +263,7 @@ if page == "Home":
         contamination risks and promote data-informed public health interventions.
         """)
     with col2:
-        st.image(mission_img, use_column_width=True)
+        st.image(mission_img, use_container_width=True)
 
     st.markdown("---")
 
@@ -272,7 +272,7 @@ if page == "Home":
     cols = st.columns(len(team_imgs))
     for i, img_path in enumerate(team_imgs):
         with cols[i]:
-            st.image(img_path, use_column_width=True, caption=f"Team Member {i+1}")
+            st.image(img_path, use_container_width=True, caption=f"Team Member {i+1}")
 
     st.markdown("---")
 
@@ -280,7 +280,7 @@ if page == "Home":
     st.markdown("## 🔮 Vision")
     col1, col2 = st.columns([1, 2])
     with col1:
-        st.image(vision_img, use_column_width=True)
+        st.image(vision_img, use_container_width=True)
     with col2:
         st.write("""
         To be the leading open-source platform advancing water safety in low-resource settings 
