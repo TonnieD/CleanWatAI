@@ -131,6 +131,7 @@ if "location_name" not in df.columns:
 
 
 # Navigation options
+st.set_page_config(layout="wide")
 st.sidebar.title("📍 CleanWatAI Navigation")
 
 st.sidebar.title("Navigation")
