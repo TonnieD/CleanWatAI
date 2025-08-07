@@ -421,6 +421,12 @@ elif page == "Water Point Contamination Risk Map":
         available_risks = sorted(df["risk_label"].unique().tolist())
         selected_risks = st.multiselect("Filter by risk level:", available_risks, default=available_risks)
         filtered_df = df[df["risk_label"].isin(selected_risks)]
+        if "location_name" not in filtered_df.columns:
+            filtered_df["location_name"] = (
+                filtered_df["clean_adm3"].fillna("") + ", " +
+                filtered_df["clean_adm2"].fillna("") + ", " +
+                filtered_df["clean_adm1"].fillna("")
+            )
 
         # Handle case where no points are selected — show blank map
         if filtered_df.empty:
@@ -472,9 +478,6 @@ elif page == "Water Point Contamination Risk Map":
             initial_view_state=view_state,
             tooltip=tooltip
         ))
-
-        st.write("Filtered DF:", filtered_df.shape)
-        st.write(filtered_df.head())
 
         # Point selector and detail box
         if not filtered_df.empty and 'location_name' in filtered_df.columns:
