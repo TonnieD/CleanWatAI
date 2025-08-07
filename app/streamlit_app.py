@@ -472,10 +472,10 @@ elif page == "Water Point Contamination Risk Map":
         st.write("Columns in filtered_df:", filtered_df.columns.tolist())
 
         # Point selector and detail box
-        if not filtered_df.empty:
+        if not filtered_df.empty and 'location_name' in filtered_df.columns:
             selected_point = st.selectbox(
                 "Select a monitoring point for details:",
-                options=filtered_df['location_name'].tolist()
+                options=filtered_df['location_name'].dropna().tolist()
             )
 
             if selected_point:
