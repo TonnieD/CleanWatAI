@@ -119,6 +119,15 @@ social_icons = {
     "LinkedIn": ASSETS_DIR / "linkedin.jpeg"
 }
 
+ASSETS_DIR = Path(__file__).parent / "images"
+
+st.write("🔍 Looking for images in:", ASSETS_DIR)
+if not ASSETS_DIR.exists():
+    st.error("❌ The images directory was not found.")
+else:
+    st.success("✅ Images directory found!")
+    st.write("📁 Files in images/:", list(ASSETS_DIR.glob("*")))
+
 # Sidebar to choose data source
 st.sidebar.markdown("### 📁 Data Source")
 data_choice = st.sidebar.radio(
