@@ -104,11 +104,11 @@ vision_img = ASSETS_DIR / "vision.jpeg"
 
 # Team avatars
 team_members = {
-    "Anthony": ASSETS_DIR / "anthony.jpeg",
-    "Lewis": ASSETS_DIR / "lewis.jpeg",
-    "Phanela": ASSETS_DIR / "phanela.jpeg",
-    "Margaret": ASSETS_DIR / "maggie.jpeg",
     "Diana": ASSETS_DIR / "diana.jpeg",
+    "Phanela": ASSETS_DIR / "phanela.jpeg",
+    "Lewis": ASSETS_DIR / "lewis.jpeg",
+    "Margaret": ASSETS_DIR / "maggie.jpeg",
+    "Anthony": ASSETS_DIR / "anthony.jpeg",
 }
 
 # Social/contact icons
