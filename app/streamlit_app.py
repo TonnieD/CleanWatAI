@@ -421,6 +421,7 @@ elif page == "Water Point Contamination Risk Map":
         available_risks = sorted(df["risk_label"].unique().tolist())
         selected_risks = st.multiselect("Filter by risk level:", available_risks, default=available_risks)
         filtered_df = df[df["risk_label"].isin(selected_risks)]
+        filtered_df["location_name"] = df.loc[filtered_df.index, "location_name"]
 
         # Handle case where no points are selected — show blank map
         if filtered_df.empty:
