@@ -167,15 +167,15 @@ social_icons = {
     #("Default (Kenya)", "Upload Your Own")
 #)
 
-if data_choice == "Default (Kenya)":
-    df = load_main_data()
-else:
-    uploaded_file = st.sidebar.file_uploader("Upload CSV File", type=["csv"])
-    if uploaded_file is not None:
-        df = load_custom_data(uploaded_file)
-    else:
-        st.warning("Please upload a CSV file to proceed.")
-        st.stop()
+# if data_choice == "Default (Kenya)":
+#     df = load_main_data()
+# else:
+#     uploaded_file = st.sidebar.file_uploader("Upload CSV File", type=["csv"])
+#     if uploaded_file is not None:
+#         df = load_custom_data(uploaded_file)
+#     else:
+#         st.warning("Please upload a CSV file to proceed.")
+#         st.stop()
 
 def risk_label(r):
     return {
