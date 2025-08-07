@@ -680,6 +680,13 @@ elif page == "Water Point Data Analysis":
                 st.text("")
 
                 # ✅ Step 1: Define the new column (do this outside any widget)
+                # Ensure 'location_name' exists before generating 'point_id'
+                if 'location_name' not in df.columns:
+                    df['location_name'] = (
+                        df['clean_adm3'].fillna('') + ', ' +
+                        df['clean_adm2'].fillna('') + ', ' +
+                        df['clean_adm1'].fillna('')
+                    )
                 df['point_id'] = df['location_name'].fillna('Unnamed') + ' (' + df['latitude'].astype(str) + ', ' + df['longitude'].astype(str) + ')'
 
                 # ✅ Step 2: Use it in the selectbox
