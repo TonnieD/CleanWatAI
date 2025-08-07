@@ -101,7 +101,7 @@ data_choice = st.sidebar.radio(
 )
 
 if data_choice == "Default (Kenya)":
-    df = load_default_data()
+    df = load_main_data()
 else:
     uploaded_file = st.sidebar.file_uploader("Upload CSV File", type=["csv"])
     if uploaded_file is not None:
