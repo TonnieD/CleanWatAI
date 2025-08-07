@@ -469,8 +469,6 @@ elif page == "Water Point Contamination Risk Map":
             tooltip=tooltip
         ))
 
-        st.write("Columns in filtered_df:", filtered_df.columns.tolist())
-
         # Point selector and detail box
         if not filtered_df.empty and 'location_name' in filtered_df.columns:
             selected_point = st.selectbox(
