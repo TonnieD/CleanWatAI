@@ -247,11 +247,27 @@ if page == "Home":
     with col1:
         st.image(about_img, use_container_width=True)
     with col2:
-        st.write("""
-        CleanWatAI is an innovative initiative leveraging AI to ensure safe and accessible water 
-        for all. We combine geospatial, environmental, and natural language data to predict and 
-        prevent water contamination in rural communities.
-        """)
+        st.write(
+            """
+        Water is life. Yet for millions, that life is silently threatened every day by 
+        contaminated sources, failing infrastructure, and overlooked early signs. At CleanWatAI, 
+        we set out to change that — by teaching machines to listen when people speak about water.
+
+        We are a team of data scientists who believe that Artificial Intelligence shouldn't just 
+        be smart — it should be human-aware. CleanWatAI was born from a simple but powerful 
+        idea: that hidden within scattered news reports around the world are stories that warn us — 
+        if only we had the tools to hear them.
+
+        We use Natural Language Processing (NLP) to analyze global water-related news and identify 
+        phrases that signal contamination, danger, or crisis. But we didn’t stop at building a 
+        classifier. We built a solution — one that merges structured data, geographical 
+        intelligence, and machine learning into a real-time, explainable, and deployed model.
+
+        Our project doesn’t just predict — it prevents. It gives a voice to forgotten communities 
+        and empowers decision-makers with clarity before disaster strikes.
+        """
+        )
+
 
     st.markdown("---")
 
@@ -259,10 +275,13 @@ if page == "Home":
     st.markdown("## 🎯 Mission")
     col1, col2 = st.columns([2, 1])
     with col1:
-        st.write("""
-        Our mission is to empower underserved communities with AI-driven tools that predict water 
-        contamination risks and promote data-informed public health interventions.
-        """)
+        st.write(
+            """
+        To harness the power of Natural Language Processing and data science to detect, 
+        visualize, and prevent water contamination risks — empowering communities and 
+        organizations with early, actionable insights.
+        """
+        )
     with col2:
         st.image(mission_img, use_container_width=True)
 
@@ -288,10 +307,15 @@ if page == "Home":
     with col1:
         st.image(vision_img, use_container_width=True)
     with col2:
-        st.write("""
-        To be the leading open-source platform advancing water safety in low-resource settings 
-        through responsible, transparent, and community-centered AI innovation.
-        """)
+        st.write(
+            """
+        A world where no community is left vulnerable to water-related dangers because 
+        warnings were missed, unheard, or too late.  
+
+        A future where Artificial Intelligence doesn’t just predict outcomes — 
+        it protects lives.
+        """
+        )
 
     st.markdown("---")
 
