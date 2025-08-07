@@ -121,6 +121,14 @@ def add_risk_metadata(df):
     df["risk_level"] = df["risk_label_clean"]
     return df
 
+# Ensure 'location_name' column exists
+if "location_name" not in df.columns:
+    df["location_name"] = (
+        df["clean_adm3"].fillna("") + ", " +
+        df["clean_adm2"].fillna("") + ", " +
+        df["clean_adm1"].fillna("")
+    )
+
 
 # Navigation options
 st.sidebar.title("📍 CleanWatAI Navigation")
@@ -317,13 +325,6 @@ elif page == "Water Point Contamination Risk Map":
         #Load data
         df = df.dropna(subset=["latitude", "longitude"])
         df.dropna(axis=1, how="all", inplace=True)
-
-        #Add location name
-        df["location_name"] = (
-            df["clean_adm3"].fillna("") + ", " +
-            df["clean_adm2"].fillna("") + ", " +
-            df["clean_adm1"].fillna("")
-        )
 
         # Predict risk
         df["predicted_risk"] = model.predict(df)
