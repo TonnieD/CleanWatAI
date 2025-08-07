@@ -94,7 +94,7 @@ def load_custom_data(uploaded_file):
     return pd.read_csv(uploaded_file)
 
 # Base path (adjust if your assets are deeper, e.g., in "assets/images/")
-ASSETS_DIR = Path(__file__).parent / "assets"
+ASSETS_DIR = Path(__file__).parent / "images"
 
 # Individual image paths
 about_img = ASSETS_DIR / "about.jpeg"
