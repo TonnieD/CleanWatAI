@@ -89,7 +89,26 @@ def load_main_data():
     path = Path(__file__).parent / "data" / "environmental.csv"
     return pd.read_csv(path)
 
-df = load_main_data()
+@st.cache_data
+def load_custom_data(uploaded_file):
+    return pd.read_csv(uploaded_file)
+
+# Sidebar to choose data source
+st.sidebar.markdown("### 📁 Data Source")
+data_choice = st.sidebar.radio(
+    "Select Dataset:",
+    ("Default (Kenya)", "Upload Your Own")
+)
+
+if data_choice == "Default (Kenya)":
+    df = load_default_data()
+else:
+    uploaded_file = st.sidebar.file_uploader("Upload CSV File", type=["csv"])
+    if uploaded_file is not None:
+        df = load_custom_data(uploaded_file)
+    else:
+        st.warning("Please upload a CSV file to proceed.")
+        st.stop()
 
 def risk_label(r):
     return {
@@ -145,6 +164,51 @@ page = st.sidebar.radio("Go to", [
 
 # Optional: Upload a custom dataset
 uploaded_file = st.sidebar.file_uploader("📄 Upload your water data CSV", type=["csv"])
+
+# Columns required for prediction
+required_features = [
+    "water_source_clean", "water_source_category", "water_tech_clean",
+    "clean_adm1", "clean_adm2", "clean_adm3", "status_clean",
+    "distance_to_primary", "distance_to_secondary", "distance_to_tertiary",
+    "distance_to_city", "distance_to_town", "local_population", "served_population",
+    "crucialness", "pressure", "staleness_score", "latitude", "longitude",
+    "chirps_30_precipitation", "ndvi_30_NDVI", "lst_30_LST_Day_1km", "pop_population"
+]
+
+# Default fallback data path
+default_data_path = "data/processed/clean_merged_with_env.csv"
+
+# Function to assign risk label
+def assign_risk_label(score):
+    if score >= 0.75:
+        return "High"
+    elif score >= 0.5:
+        return "Medium"
+    elif score >= 0.25:
+        return "Low"
+    else:
+        return "Safe"
+
+# Load uploaded or fallback data
+if uploaded_file is not None:
+    df = pd.read_csv(uploaded_file)
+
+    # Check for required columns
+    if all(col in df.columns for col in required_features):
+        # Make prediction
+        df["risk_score"] = model.predict_proba(df[required_features])[:, 1]
+        df["predicted_risk"] = df["risk_score"].apply(lambda x: round(x, 3))
+        df["risk_label"] = df["risk_score"].apply(assign_risk_label)
+        df["risk_label_clean"] = df["risk_label"].str.lower()
+        df["risk_level"] = df["risk_label_clean"].map({
+            "safe": 0, "low": 1, "medium": 2, "high": 3
+        })
+        st.sidebar.success("✅ Uploaded dataset used.")
+    else:
+        st.sidebar.error("❌ Uploaded file missing required columns. Using default.")
+        df = pd.read_csv(default_data_path)
+else:
+    df = pd.read_csv(default_data_path)
 
 # Route to selected page
 if page == "Home":
