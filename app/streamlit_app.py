@@ -290,7 +290,7 @@ if page == "Home":
         st.image(about_img, use_container_width=True)
     with col2:
         st.markdown("""
-            <div style='font-size: 24px; line-height: 1.6'>
+            <div style='font-size: 22px; line-height: 1.6'>
             Water is life. Yet for millions, that life is silently threatened every day by contaminated sources, failing infrastructure, and overlooked early signs.  
             At CleanWatAI, we set out to change that — by teaching machines to listen when people speak about water.  
             <br><br>
@@ -965,4 +965,4 @@ elif page == "Water Point Data Analysis":
             st.text("")
             st.text("")
             with st.container(border=True):
-                st.caption("©  2025 CleanWaterAI. Data sourced from WPDx and other public datasets.")
+                st.caption("© 2025 CleanWaterAI. Data sourced from WPDx and other public datasets.")
