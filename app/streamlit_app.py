@@ -143,6 +143,9 @@ page = st.sidebar.radio("Go to", [
     "Water Point Data Analysis"
 ])
 
+# Optional: Upload a custom dataset
+uploaded_file = st.sidebar.file_uploader("📄 Upload your water data CSV", type=["csv"])
+
 # Route to selected page
 if page == "Home":
     st.title("Welcome to CleanWatAI 💧")
