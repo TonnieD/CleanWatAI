@@ -304,6 +304,26 @@ elif page == "Quick Insights and Reports":
             #Load data
             df = df.dropna(subset=["latitude", "longitude"])
             df.dropna(axis=1, how="all", inplace=True)
+
+            # Ensure 'risk_score' exists
+            if 'risk_score' not in df.columns:
+                # Select the necessary feature columns for your model
+                # Replace this with the exact features your model expects
+                feature_columns = [
+                            "water_source_clean", "water_source_category", "water_tech_clean",
+                            "clean_adm1", "clean_adm2", "clean_adm3", "status_clean",
+                            "distance_to_primary", "distance_to_secondary", "distance_to_tertiary",
+                            "distance_to_city", "distance_to_town", "local_population", "served_population",
+                            "crucialness", "pressure", "staleness_score", "latitude", "longitude",
+                            "chirps_30_precipitation", "ndvi_30_NDVI", "lst_30_LST_Day_1km", "pop_population"
+                        ]
+                
+                try:
+                    X = df[feature_columns]
+                    df['risk_score'] = environmental_model.predict(X)
+                except Exception as e:
+                    st.error(f"Error predicting risk_score: {e}")
+                    st.stop()
             # Get unique locations
             unique_locations = df["clean_adm2"].dropna().unique()
             selected_location = st.selectbox("Select Location", sorted(unique_locations))
