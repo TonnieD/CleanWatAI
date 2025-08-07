@@ -435,7 +435,11 @@ elif page == "Water Point Contamination Risk Map":
             )
 
             # Set empty DataFrame for rendering
-            filtered_df = pd.DataFrame(columns=["latitude", "longitude", "location_name", "color", "risk_label"])
+            filtered_df = pd.DataFrame(columns=[
+                "latitude", "longitude", "location_name", "color", "risk_label",
+                "quality_score", "risk_level", "local_population",
+                "contamination_type", "served_population"
+            ])
         else:
             view_state = pdk.ViewState(
                 latitude=filtered_df["latitude"].mean(),
