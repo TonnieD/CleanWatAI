@@ -176,7 +176,7 @@ required_features = [
 ]
 
 # Default fallback data path
-default_data_path = "data/processed/clean_merged_with_env.csv"
+default_data_path = Path(__file__).parent / "data" / "environmental.csv"
 
 # Function to assign risk label
 def assign_risk_label(score):
