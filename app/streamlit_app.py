@@ -980,4 +980,4 @@ elif page == "Water Point Data Analysis":
             st.text("")
             st.text("")
             with st.container(border=True):
-                st.caption("© 2025 CleanWaterAI. Data sourced from WPDx and other public datasets.")
+                st.caption("©  2025 CleanWaterAI. Data sourced from WPDx and other public datasets.")
