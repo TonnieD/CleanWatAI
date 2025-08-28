@@ -3,13 +3,13 @@ from PIL import Image
 from pathlib import Path
 import sys
 import os
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+# sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
 
 st.set_page_config(page_title="About | CleanWatAI", page_icon="💧", layout="wide")
 
 
-st.title("About this Project & Me")
+st.title("About this Project")
 st.caption("A practical data app showcasing end-to-end data science skills.")
 
 # Base path (adjust if your assets are deeper, e.g., in "assets/images/")
@@ -130,3 +130,9 @@ for i, (label, icon_path) in enumerate(social_icons.items()):
     with contact_cols[i]:
         st.image(icon_path, width=40)
         st.caption(label)
+
+st.markdown("---")
+
+
+with st.container(border=True):
+        st.caption("© 2025 CleanWaterAI. Data sourced from WPDx and other public datasets.")
