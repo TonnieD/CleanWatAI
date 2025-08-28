@@ -1,4 +1,7 @@
 {
   "python.defaultInterpreterPath": "C:\\Users\\ANTHONY\\anaconda3\\envs\\env_cleanwatai\\python.exe",
-  "jupyter.jupyterServerType": "local"
+  "jupyter.jupyterServerType": "local",
+  "python-envs.defaultEnvManager": "ms-python.python:conda",
+  "python-envs.defaultPackageManager": "ms-python.python:conda",
+  "python-envs.pythonProjects": []
 }
