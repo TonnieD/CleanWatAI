@@ -1,60 +1,63 @@
-from nltk.stem import WordNetLemmatizer
-from nltk.corpus import stopwords
-import nltk
 import re
-import string
-import sys
 import os
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+from pathlib import Path
+import nltk
+from nltk.corpus import stopwords
+from nltk.stem import WordNetLemmatizer
 
-NLTK_PATH = os.path.join("app", "nltk_data")
-os.makedirs(NLTK_PATH, exist_ok=True)
+# === Force NLTK data into project/app/nltk_data ===
+PROJECT_ROOT = Path(__file__).resolve().parents[1].parent  # project/
+NLTK_PATH = PROJECT_ROOT / "app" / "nltk_data"
+NLTK_PATH.mkdir(parents=True, exist_ok=True)
 
-# Set both runtime path and environment variable
-nltk.data.path.append(NLTK_PATH)
-os.environ["NLTK_DATA"] = NLTK_PATH
+# Tell both env + nltk to use only this path
+os.environ["NLTK_DATA"] = str(NLTK_PATH)
+nltk.data.path = [str(NLTK_PATH)]
 
-# List of required resources
-REQUIRED_NLTK_RESOURCES = [
-    ("tokenizers/punkt", "punkt"),
-    ("corpora/stopwords", "stopwords"),
-    ("corpora/wordnet", "wordnet"),
-    ("corpora/omw-1.4", "omw-1.4"),
-    ("tokenizers/punkt_tab", "punkt_tab"),
-]
+# === Ensure required packages exist ===
+REQUIRED = {
+    "punkt": "tokenizers/punkt",
+    "stopwords": "corpora/stopwords",
+    "wordnet": "corpora/wordnet",
+    "omw-1.4": "corpora/omw-1.4",
+}
 
-# Download if not already available
-for path, name in REQUIRED_NLTK_RESOURCES:
+for name, path in REQUIRED.items():
     try:
         nltk.data.find(path)
     except LookupError:
-        nltk.download(name, download_dir=NLTK_PATH)
+        nltk.download(name, download_dir=str(NLTK_PATH))
 
-# Then proceed to your pipeline setup
-stop_words = set(stopwords.words('english'))
+# === NLP tools ===
+stop_words = set(stopwords.words("english"))
 lemmatizer = WordNetLemmatizer()
 
-#cleaning + lemmatization function
-def clean_text(text):
-    # Lowercase
+# === Cleaning functions ===
+def clean_text(text: str) -> str:
+    """
+    Lowercases, handles negations, removes punctuation, tokenizes,
+    lemmatizes, and removes stopwords.
+    """
     text = text.lower()
-    
-    # Handle negations (combine with next word if possible)
+
+    # Handle negations
     text = re.sub(r"\b(no|not|never)\s+(\w+)", r"no_\2", text)
 
-    # Remove punctuation except underscores (used in negation)
+    # Remove punctuation (keep underscores for negations)
     text = re.sub(r"[^\w\s_]", "", text)
 
     # Tokenize
     tokens = nltk.word_tokenize(text)
 
-    # Lemmatize and remove stopwords (except 'no_x' preserved words)
+    # Lemmatize & filter
     cleaned = [
         lemmatizer.lemmatize(token)
         for token in tokens
-        if (token in stop_words and token.startswith('no_')) or (token not in stop_words and len(token) > 2)
+        if (
+            token.startswith("no_")  # keep negations
+            or (token not in stop_words and len(token) > 2)
+        )
     ]
-
     return " ".join(cleaned)
 
 def clean_texts(texts):
