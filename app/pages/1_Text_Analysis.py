@@ -17,7 +17,13 @@ def load_pipeline():
     if not MODEL_PATH.exists():
         st.error("⚠️ Trained pipeline not found. Please train and save the model first.")
         return None
-    return joblib.load(MODEL_PATH)
+    
+    try:
+        pipeline = joblib.load(MODEL_PATH)
+        return pipeline
+    except Exception as e:
+        st.error(f"❌ Error loading pipeline: {e}")
+        return None
 
 pipeline = load_pipeline()
 
